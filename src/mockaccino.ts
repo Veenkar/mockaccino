@@ -47,7 +47,7 @@ class Mockaccino {
 			var mock_strings = this.getFunctionStrings((fn: any) => 
 				`\tMOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
 			).join("\n");
-			var decl_strings = this.getFunctionStrings().join(";\n");
+			var decl_strings = this.getFunctionStrings().join("\n");
 			console.log(mock_strings);
 			var header =
 `

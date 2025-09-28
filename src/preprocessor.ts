@@ -5,8 +5,17 @@ class Preprocessor
 		return input.replace(/\\[ \t]*\r?\n/g, '');
 	}
 
+
+	static removeIncludeDirectives(input: string): string {
+		return input
+			.split('\n')
+			.filter(line => !/^\s*#include\b/.test(line))
+			.join('\n');
+	}
+
 	static preprocess(input: string): string {
 		input = this.mergeLineEscapes(input);
+		input = this.removeIncludeDirectives(input);
 		// Simple C preprocessor implementation for #define, #ifdef, #if, #elif, #else
 		const lines = input.split('\n');
 		const macros: Record<string, any> = {};
