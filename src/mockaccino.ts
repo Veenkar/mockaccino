@@ -2,6 +2,12 @@ var preprocessor = require("./preprocessor.ts");
 var parse = require("./cparse.js");
 const fs = require('fs');
 
+interface FunctionInfo {
+	returnType: string | undefined;
+	name: string;
+	arguments: string;
+}
+
 class Mockaccino {
 	private content_raw: string;
 	private content: string;
@@ -9,7 +15,6 @@ class Mockaccino {
 	private caps_name: string;
 	private filename: string;
 	private header_name: string;
-	private src_name: string;
 	private path: string;
 	private mockHeaderPath: string;
 	private mockSrcPath: string;
@@ -34,30 +39,32 @@ class Mockaccino {
 		const dotIndex = this.filename.lastIndexOf('.');
 		this.name = dotIndex !== -1 ? this.filename.slice(0, dotIndex) : this.filename;
 		this.header_name = this.name + ".h";
-		this.src_name = this.name + ".c";
 		this.caps_name = this.name.toUpperCase();
 	}
 
 	public mock() {
 		if ("file" === this.uri.scheme) {
 			var mock_strings = this.getFunctionStrings((fn: any) => 
-				`MOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
-		).join("\n");
-		console.log(mock_strings);
-		var header =
+				`\tMOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
+			).join("\n");
+			var decl_strings = this.getFunctionStrings().join(";\n");
+			console.log(mock_strings);
+			var header =
 `
 #ifndef ${this.caps_name}_H
 #define ${this.caps_name}_H
-#include ${this.header_name}
+#include "${this.header_name}"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+${decl_strings}
 
 class ${this.name}Mock {
 	public:
 ${mock_strings}
 };
 
-#endif /* {this.caps_name}_H */
+#endif /* ${this.caps_name}_H */
 
 `;
 			console.log(header);
@@ -74,7 +81,8 @@ ${mock_strings}
 			? ast.filter((node: any) => node.type === "FunctionDeclaration")
 			: [];
 		console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
-		const mappedFunctions = functionDeclarations.map((fn: any) => ({
+
+		const mappedFunctions: FunctionInfo[] = functionDeclarations.map((fn: any) => ({
 			returnType: fn.defType?.modifier
 				? Mockaccino.parseArgs(fn.defType)
 				: fn.defType?.name,
@@ -88,7 +96,7 @@ ${mock_strings}
 	}
 
 	static defaultStringifyFunction(fn: any): string {
-		return `${fn.returnType} ${fn.name}(${fn.arguments})`;
+		return `${fn.returnType} ${fn.name}(${fn.arguments});`;
 	}
 
 
