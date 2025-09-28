@@ -42,25 +42,25 @@ class Mockaccino {
 		}
 	}
 
-	static parseArgs(args: any): string {
-		// var arg = args[0];
+	static parseArgs(args: any, includeName: boolean = true): string {
 		function parseArg(arg: any): string {
 			const modifiers = arg?.modifier?.length ? arg.modifier.join(' ') + ' ' : '';
 			if (arg?.type === "PointerType") {
-				const targetStr = Mockaccino.parseArgs(arg.target);
+				const targetStr = Mockaccino.parseArgs(arg.target, includeName);
 				return `${modifiers}*${targetStr}`;
 			}
 			if (arg?.type === "Type") {
-				return `${modifiers}${arg.name}`;
+				return includeName && arg.name ? `${modifiers}${arg.name}`: modifiers;
 			}
 			if (arg?.type === "Definition") {
 				if (arg.defType){
-                    return Mockaccino.parseArgs(arg.defType) + (arg.name ? " " + arg.name : "");
+					const typeStr = Mockaccino.parseArgs(arg.defType, includeName);
+					return includeName && arg.name ? `${typeStr} ${arg.name}` : typeStr;
 				}
 			}
 			return '';
 		}
-		return Array.isArray(args)? args.map((arg) => parseArg(arg)).join(", ") : parseArg(args);
+		return Array.isArray(args) ? args.map((arg) => parseArg(arg)).join(", ") : parseArg(args);
 	}
 }
 
