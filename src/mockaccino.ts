@@ -19,6 +19,8 @@ class Mockaccino {
 	private mockHeaderPath: string;
 	private mockSrcPath: string;
 	private uri: any;
+	private mock_name: string;
+	private mock_instance_name: string;
 
 	constructor(content: string, uri: any) {
 		this.content_raw = content;
@@ -40,6 +42,8 @@ class Mockaccino {
 		this.name = dotIndex !== -1 ? this.filename.slice(0, dotIndex) : this.filename;
 		this.header_name = this.name + ".h";
 		this.caps_name = this.name.toUpperCase();
+		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
+		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
 	}
 
 	public mock() {
@@ -51,8 +55,8 @@ class Mockaccino {
 				/* <--- SOURCE TEMPLATE */
 `${fn.returnType} ${fn.name}(${fn.arguments})
 {
-	assert(nullptr != _${this.name}Mock, "No mock instance found, create a mock first.");
-	return _${this.name}Mock->${fn.name}(${fn.arguments});
+	assert(nullptr != ${this.mock_instance_name}Mock_, "No mock instance found, create a mock first.");
+	return ${this.name}Mock_->${fn.name}(${fn.arguments});
 }
 `
 				/* <--- SOURCE TEMPLATE */
@@ -61,30 +65,52 @@ class Mockaccino {
 			console.log(mock_strings);
 			/* <--- SOURCE TEMPLATE */
 var header =
-`
-#ifndef ${this.caps_name}_H
+`#ifndef ${this.caps_name}_H
 #define ${this.caps_name}_H
+
 #include "${this.header_name}"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 ${decl_strings}
 
-class ${this.name}Mock {
+class ${this.mock_name} {
 	public:
+	${this.mock_name}();
+	~${this.mock_name}();
 ${mock_strings}
 };
 
+/*
+ * Generated with Mockaccino by SelerLabs
+ * https://github.com/Veenkar/mockaccino
+ */
 #endif /* ${this.caps_name}_H */
 
 `;
 
 var src =
-`
-#include "${this.name}_mock.h"
+`#include "${this.name}_mock.h"
+#include <cassert>
+
+static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
+
+${this.mock_name}::${this.mock_name}()
+{
+	assert(nullptr == ${this.name}Mock_, "Mock instance already exists.");
+	${this.mock_instance_name}_ = this;
+}
+
+${this.mock_name}::~${this.mock_name}()
+{
+	${this.mock_instance_name}_ = nullptr;
+}
 
 ${impl_strings}
-
+/*
+ * Generated with Mockaccino by SelerLabs
+ * https://github.com/Veenkar/mockaccino
+ */
 `;
 			/* <--- SOURCE TEMPLATE */
 
