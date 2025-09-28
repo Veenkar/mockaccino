@@ -1,10 +1,15 @@
 var preprocessor = require("./preprocessor.ts");
 var parse = require("./cparse.js");
+const fs = require('fs');
 
 class Mockaccino {
 	private content_raw: string;
 	private content: string;
 	private name: string;
+	private caps_name: string;
+	private filename: string;
+	private header_name: string;
+	private src_name: string;
 	private path: string;
 	private mockHeaderPath: string;
 	private mockSrcPath: string;
@@ -21,17 +26,42 @@ class Mockaccino {
 			? this.path.slice(0, extIndex) + '_mock' + ".h"
 			: this.path + '_mock';
 		this.mockSrcPath = extIndex !== -1
-			? this.path.slice(0, extIndex) + '_mock' + ".c"
+			? this.path.slice(0, extIndex) + '_mock' + ".cc"
 			: this.path + '_mock';
 
 		const pathParts = this.path.split(/[\\/]/);
-		this.name = pathParts[pathParts.length - 1];
-
+		this.filename = pathParts[pathParts.length - 1];
+		const dotIndex = this.filename.lastIndexOf('.');
+		this.name = dotIndex !== -1 ? this.filename.slice(0, dotIndex) : this.filename;
+		this.header_name = this.name + ".h";
+		this.src_name = this.name + ".c";
+		this.caps_name = this.name.toUpperCase();
 	}
 
 	public mock() {
 		if ("file" === this.uri.scheme) {
-			console.log(this.getFunctionStrings());
+			var mock_strings = this.getFunctionStrings((fn: any) => 
+				`MOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
+		).join("\n");
+		console.log(mock_strings);
+		var header =
+`
+#ifndef ${this.caps_name}_H
+#define ${this.caps_name}_H
+#include ${this.header_name}
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+class ${this.name}Mock {
+	public:
+${mock_strings}
+};
+
+#endif /* {this.caps_name}_H */
+
+`;
+			console.log(header);
+			fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
 		}
 	}
 
