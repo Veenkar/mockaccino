@@ -109,7 +109,7 @@ class Preprocessor
 					if (typeof macro === 'object' && macro.params) {
 						const fnRegex = new RegExp(`\\b${key}\\s*\\(([^)]*)\\)`, 'g');
 						replacedLine = replacedLine.replace(fnRegex, (match, argsStr) => {
-							const args = argsStr.split(',').map(a => a.trim());
+							const args = argsStr.split(',').map((a: string) => a.trim());
 							let body = macro.body;
 							macro.params.forEach((p: string, idx: number) => {
 								const argVal = args[idx] !== undefined ? args[idx] : '';

@@ -18,9 +18,9 @@ class Mockaccino {
 	private path: string;
 	private mockHeaderPath: string;
 	private mockSrcPath: string;
-	private uri: vscode.Uri;
+	private uri: any;
 
-	constructor(content: string, uri: vscode.Uri) {
+	constructor(content: string, uri: any) {
 		this.content_raw = content;
 		this.uri = uri;
 		this.content = preprocessor.preprocess(this.content_raw);
