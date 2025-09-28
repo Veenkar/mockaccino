@@ -21,6 +21,10 @@ class Mockaccino {
 	private uri: any;
 	private mock_name: string;
 	private mock_instance_name: string;
+	private comment_text =`/*
+ * Generated with Mockaccino by SelerLabs
+ * https://github.com/Veenkar/mockaccino
+ */`;
 
 	constructor(content: string, uri: any) {
 		this.content_raw = content;
@@ -81,12 +85,8 @@ class ${this.mock_name} {
 ${mock_strings}
 };
 
-/*
- * Generated with Mockaccino by SelerLabs
- * https://github.com/Veenkar/mockaccino
- */
+${this.comment_text}
 #endif /* ${this.caps_name}_H */
-
 `;
 
 var src =
@@ -107,10 +107,7 @@ ${this.mock_name}::~${this.mock_name}()
 }
 
 ${impl_strings}
-/*
- * Generated with Mockaccino by SelerLabs
- * https://github.com/Veenkar/mockaccino
- */
+${this.comment_text}
 `;
 			/* <--- SOURCE TEMPLATE */
 
