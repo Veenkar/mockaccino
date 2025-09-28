@@ -53,7 +53,7 @@ class Mockaccino {
 	public mock() {
 		if ("file" === this.uri.scheme) {
 			var mock_strings = this.getFunctionStrings((fn: any) => 
-				`\tMOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
+				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`
 			).join("\n");
 			var impl_strings = this.getFunctionStrings((fn: any) => 
 				/* <--- SOURCE TEMPLATE */
@@ -124,7 +124,7 @@ ${this.comment_text}
 		console.log(`AST:\n${ast_string}`);
 
 		const functionDeclarations = Array.isArray(ast)
-			? ast.filter((node: any) => node.type === "FunctionDeclaration")
+			? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
 			: [];
 		console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
 
@@ -148,7 +148,8 @@ ${this.comment_text}
 
 	static parseArgs(args: any, includeName: boolean = true): string {
 		function parseArg(arg: any): string {
-			const modifiers = arg?.modifier?.length ? arg.modifier.join(' ') + ' ' : '';
+			const mods = arg?.modifier?.filter((node: any) => node !== "static" && node.type !== "extern");
+			const modifiers = mods?.length ? arg.modifier.join(' ') + ' ' : '';
 			if (arg?.type === "PointerType") {
 				const targetStr = Mockaccino.parseArgs(arg.target, includeName);
 				return `${modifiers}*${targetStr}`;
