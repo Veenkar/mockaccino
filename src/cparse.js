@@ -87,7 +87,7 @@ var cparse = (function()
 	};
 
 	const defaultTypeNames = ["void", "char", "short", "int", "long", "float", "double"];
-	const defaultTypeModifier = ["signed", "unsigned", "short", "long", "const", "struct", "enum"];
+	const defaultTypeModifier = ["signed", "unsigned", "short", "long", "const", "struct", "enum", "extern", "static", "volatile"];
 
 	return function(src, options)
 	{
