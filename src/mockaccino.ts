@@ -47,9 +47,20 @@ class Mockaccino {
 			var mock_strings = this.getFunctionStrings((fn: any) => 
 				`\tMOCK_METHOD(${fn.name}, ${fn.returnType}, ${fn.arguments});`
 			).join("\n");
+			var impl_strings = this.getFunctionStrings((fn: any) => 
+				/* <--- SOURCE TEMPLATE */
+`${fn.returnType} ${fn.name}(${fn.arguments})
+{
+	assert(nullptr != _${this.name}Mock, "No mock instance found, create a mock first.");
+	return _${this.name}Mock->${fn.name}(${fn.arguments});
+}
+`
+				/* <--- SOURCE TEMPLATE */
+			).join("\n");
 			var decl_strings = this.getFunctionStrings().join("\n");
 			console.log(mock_strings);
-			var header =
+			/* <--- SOURCE TEMPLATE */
+var header =
 `
 #ifndef ${this.caps_name}_H
 #define ${this.caps_name}_H
@@ -67,8 +78,20 @@ ${mock_strings}
 #endif /* ${this.caps_name}_H */
 
 `;
-			console.log(header);
+
+var src =
+`
+#include "${this.name}_mock.h"
+
+${impl_strings}
+
+`;
+			/* <--- SOURCE TEMPLATE */
+
 			fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
+			fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
+			console.log(header);
+			console.log(src);
 		}
 	}
 
