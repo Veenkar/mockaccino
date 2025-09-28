@@ -1,7 +1,7 @@
 var preprocessor = require("./preprocessor.ts");
 var parse = require("./cparse.js");
 
-class Mockachino {
+class Mockaccino {
 	private content_raw: string;
 	private content: string;
 	private uri: vscode.Uri;
@@ -28,10 +28,10 @@ class Mockachino {
 			console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
 			const mappedFunctions = functionDeclarations.map((fn: any) => ({
 				returnType: fn.defType?.modifier
-					? Mockachino.parseArgs(fn.defType)
+					? Mockaccino.parseArgs(fn.defType)
 					: fn.defType?.name,
 				name: fn.name,
-				arguments: Mockachino.parseArgs(fn.arguments)
+				arguments: Mockaccino.parseArgs(fn.arguments)
 			}));
 			const mappedFunctionsStrings = mappedFunctions.map((fn: any) => (
                 `${fn.returnType} ${fn.name}(${fn.arguments})`
@@ -47,7 +47,7 @@ class Mockachino {
 		function parseArg(arg: any): string {
 			const modifiers = arg?.modifier?.length ? arg.modifier.join(' ') + ' ' : '';
 			if (arg?.type === "PointerType") {
-				const targetStr = Mockachino.parseArgs(arg.target);
+				const targetStr = Mockaccino.parseArgs(arg.target);
 				return `${modifiers}*${targetStr}`;
 			}
 			if (arg?.type === "Type") {
@@ -55,7 +55,7 @@ class Mockachino {
 			}
 			if (arg?.type === "Definition") {
 				if (arg.defType){
-                    return Mockachino.parseArgs(arg.defType) + (arg.name ? " " + arg.name : "");
+                    return Mockaccino.parseArgs(arg.defType) + (arg.name ? " " + arg.name : "");
 				}
 			}
 			return '';
@@ -66,5 +66,5 @@ class Mockachino {
 
 if(typeof module === "object")
 {
-    module.exports = Mockachino;
+    module.exports = Mockaccino;
 }
