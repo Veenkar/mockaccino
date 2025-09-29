@@ -178,7 +178,7 @@ var cparse = (function()
 
 					stmts.push(def);
 				}
-				else if(definitionIncoming())
+				else if(definitionIncoming() || lookaheadRe(/^[A-Za-z_][A-Za-z0-9_]*$/))
 				{
 					var def = readDefinition();
 					def.pos = pos;
@@ -305,10 +305,9 @@ var cparse = (function()
 
 				return stmt;
 			}
-			else if(definitionIncoming())
-			{
+			else if (definitionIncoming()) {
 				var def = readDefinition();
-				if(lookahead("="))
+				if (lookahead("="))
 					def.value = parseExpression(";");
 				else
 					consume(";");
@@ -316,9 +315,7 @@ var cparse = (function()
 				def.type = "VariableDeclaration";
 				def.pos = pos;
 				return def;
-			}
-			else
-			{
+			} else {
 				return {
 					type: "ExpressionStatement",
 					expression: parseExpression(";"),
@@ -569,49 +566,54 @@ var cparse = (function()
 			{
 				if(lookahead(typeNames[i]))
 				{
-					def.name = typeNames[i];
-
-					while(lookahead("*"))
-					{
-						//TODO allow 'const' in between
-						def = {
-							type: "PointerType",
-							target: def,
-							pos: getPos()
-						};
-					}
-
-					if(!nameless)
-						name = readIdentifier();
-
-					while(lookahead("["))
-					{
-						def = {
-							type: "PointerType",
-							target: def,
-							pos: getPos()
-						};
-
-						if(!lookahead("]"))
-						{
-							def.length = parseExpression();
-							consume("]");
-						}
-					}
-
-					if(name)
-					{
-						def = {
-							type: "Definition",
-							defType: def,
-							name: name,
-							pos: pos
-						};
-					}
-					return def;
+					return processDefinition(typeNames[i]);
 				}
 			}
+
+			/* in case for loop did not return */
+			name = readIdentifier();
+			return processDefinition(name);
+
 			unexpected(typeNames.join(", "));
+
+			function processDefinition(name) {
+				def.name = name;
+
+				while (lookahead("*")) {
+					//TODO allow 'const' in between
+					def = {
+						type: "PointerType",
+						target: def,
+						pos: getPos()
+					};
+				}
+
+				if (!nameless)
+					name = readIdentifier();
+
+				while (lookahead("[")) {
+					def = {
+						type: "PointerType",
+						target: def,
+						pos: getPos()
+					};
+
+					if (!lookahead("]")) {
+						def.length = parseExpression();
+						consume("]");
+					}
+				}
+
+				if (name) {
+					def = {
+						type: "Definition",
+						defType: def,
+						name: name,
+						pos: pos
+					};
+				}
+				return def;
+			}
 		}
 
 		function stringIncoming()
@@ -748,6 +750,32 @@ var cparse = (function()
 			for(var i = 0; i < str.length; i++)
 			{
 				if(curr != str[i])
+				{
+					index = _index;
+					curr = src[index];
+					return false;
+				}
+				next(true);
+			}
+
+			if(/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(str) && /[_a-zA-Z]/.test(curr))
+			{
+				index = _index;
+				curr = src[index];
+				return false;
+			}
+
+			if(!keepBlanks)
+				skipBlanks();
+			return true;
+		}
+
+		function lookaheadRe(str, keepBlanks)
+		{
+			var _index = index;
+			for(var i = 0; i < str.length; i++)
+			{
+				if (!new RegExp(str[i]).test(curr))
 				{
 					index = _index;
 					curr = src[index];
