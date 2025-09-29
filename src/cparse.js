@@ -758,7 +758,7 @@ var cparse = (function()
 				next(true);
 			}
 
-			if(/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(str) && /[_a-zA-Z]/.test(curr))
+			if(/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(str) && /[_a-zA-Z0-9]/.test(curr))
 			{
 				index = _index;
 				curr = src[index];
