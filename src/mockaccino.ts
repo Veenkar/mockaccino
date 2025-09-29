@@ -1,4 +1,4 @@
-var preprocessor = require("./preprocessor.ts");
+var Preprocessor = require("./preprocessor.ts");
 var parse = require("./cparse.js");
 const fs = require('fs');
 
@@ -29,7 +29,10 @@ class Mockaccino {
 	constructor(content: string, uri: any) {
 		this.content_raw = content;
 		this.uri = uri;
-		this.content = preprocessor.preprocess(this.content_raw);
+		let preprocessor = new Preprocessor(this.content_raw);
+		this.content = preprocessor.preprocess().removeCompoundExpressions().get();
+		console.log("preproc:");
+		console.log(this.content);``
 
 		this.path = this.uri.fsPath;
 		const extIndex = this.path.lastIndexOf('.');

@@ -1,23 +1,40 @@
 class Preprocessor
 {
-	static mergeLineEscapes(input: string): string {
-		// Merge lines ending with backslash (optionally followed by whitespace) and newline
-		return input.replace(/\\[ \t]*\r?\n/g, '');
+	private input: string;
+
+	constructor(input: string) {
+		this.input = input;
 	}
 
+	get(): string {
+		return this.input;
+	}
 
-	static removeIncludeDirectives(input: string): string {
-		return input
+	removeCompoundExpressions(): Preprocessor {
+		// Keep only curly brackets, remove all other characters
+		this.input = this.input.replace(/{[^}]*}/g, '{}');
+		return this;
+	}
+
+	mergeLineEscapes(): Preprocessor {
+		// Merge lines ending with backslash (optionally followed by whitespace) and newline
+		this.input = this.input.replace(/\\[ \t]*\r?\n/g, '');
+		return this;
+	}
+
+	removeIncludeDirectives(): Preprocessor {
+		this.input = this.input
 			.split('\n')
 			.filter(line => !/^\s*#include\b/.test(line))
 			.join('\n');
+		return this;
 	}
 
-	static preprocess(input: string): string {
-		input = this.mergeLineEscapes(input);
-		input = this.removeIncludeDirectives(input);
+	preprocess(): Preprocessor {
+		this.mergeLineEscapes();
+		this.removeIncludeDirectives();
 		// Simple C preprocessor implementation for #define, #ifdef, #if, #elif, #else
-		const lines = input.split('\n');
+		const lines = this.input.split('\n');
 		const macros: Record<string, any> = {};
 		const output: string[] = [];
 		const stack: Array<{active: boolean, elseUsed: boolean}> = [];
@@ -133,7 +150,8 @@ class Preprocessor
 				output.push(replacedLine);
 			}
 		}
-		return output.join('\n');
+		this.input = output.join('\n');
+		return this;
 	}
 }
 
