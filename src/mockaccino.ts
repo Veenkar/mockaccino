@@ -82,9 +82,9 @@ var header =
 ${decl_strings}
 
 class ${this.mock_name} {
-	public:
+public:
 	${this.mock_name}();
-	~${this.mock_name}();
+	virtual ~${this.mock_name}();
 ${mock_strings}
 };
 
