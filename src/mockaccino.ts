@@ -30,9 +30,9 @@ class Mockaccino {
 		this.content_raw = content;
 		this.uri = uri;
 		let preprocessor = new Preprocessor(this.content_raw);
-		this.content = preprocessor.preprocess().get();
+		this.content = preprocessor.removeComments().preprocess().removeCompoundExpressions().filterByRoundBraces().get();
 		console.log("preproc:");
-		console.log(this.content);``
+		console.log(this.content);
 
 		this.path = this.uri.fsPath;
 		const extIndex = this.path.lastIndexOf('.');
@@ -69,7 +69,7 @@ class Mockaccino {
 				/* <--- SOURCE TEMPLATE */
 			).join("\n");
 			var decl_strings = this.getFunctionStrings().join("\n");
-			console.log(mock_strings);
+			//console.log(mock_strings);
 			/* <--- SOURCE TEMPLATE */
 var header =
 `#ifndef ${this.caps_name}_H
@@ -114,20 +114,20 @@ ${this.comment_text}
 
 			fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
 			fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
-			console.log(header);
-			console.log(src);
+			//console.log(header);
+			//console.log(src);
 		}
 	}
 
 	private getFunctionStrings(stringifyFunction: (fn: any) => string = Mockaccino.defaultStringifyFunction): string[] {
 		const ast: any[] = parse(this.content);
 		const ast_string = JSON.stringify(ast, null, 2);
-		console.log(`AST:\n${ast_string}`);
+		//console.log(`AST:\n${ast_string}`);
 
 		const functionDeclarations = Array.isArray(ast)
 			? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
 			: [];
-		console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
+		//console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
 
 		const mappedFunctions: FunctionInfo[] = functionDeclarations.map((fn: any) => ({
 			returnType: fn.defType?.modifier
@@ -138,7 +138,7 @@ ${this.comment_text}
 		}));
 		const mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
 
-		console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
+		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
 		return mappedFunctionsStrings;
 	}
 

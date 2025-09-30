@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const uri = document.uri;
 			const content = document.getText();
 			vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
-			console.log(`Found content:\n${content}`);
+			// console.log(`Found content:\n${content}`);
 
 			let mockaccino = new Mockaccino(content, uri);
 			mockaccino.mock();

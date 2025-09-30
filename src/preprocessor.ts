@@ -10,9 +10,61 @@ class Preprocessor
 		return this.input;
 	}
 
-	removeCompoundExpressions(): Preprocessor {
-		// Keep only curly brackets, remove all other characters
-		this.input = this.input.replace(/{[^}]*}/g, '{}');
+	filterByRoundBraces(): Preprocessor {
+		const parts = this.input.split(';');
+		const filtered = parts
+			.map(str => str.trim())
+			.filter(str => {
+				return str.includes('(') && str.includes(')');
+			});
+		this.input = filtered.join(';\n');
+		if (this.input.length > 0) {
+			this.input += ';\n';
+		}
+		return this;
+	}
+
+	removeComments(){
+		this.removeCompoundExpressions('/*', '*/');
+		this.input = this.input
+			.split('\n')
+			.map(line => {
+				const idx = line.indexOf('//');
+				return idx !== -1 ? line.slice(0, idx) : line;
+			})
+			.join('\n');
+		return this;
+	}
+
+	removeCompoundExpressions(left_brace: string = '{', right_brace: string = '}'): Preprocessor {
+		let result = '';
+		const stack: number[] = [];
+		let i = 0;
+		while (i < this.input.length) {
+			// Check for left_brace
+			if (this.input.substr(i, left_brace.length) === left_brace) {
+				stack.push(i);
+				if (stack.length === 1) {
+					result += ';';
+				}
+				i += left_brace.length;
+				continue;
+			}
+			// Check for right_brace
+			if (this.input.substr(i, right_brace.length) === right_brace) {
+				if (stack.length === 1) {
+					// Skip content inside outermost braces
+				}
+				stack.pop();
+				i += right_brace.length;
+				continue;
+			}
+			if (stack.length === 0) {
+				result += this.input[i];
+			}
+			i++;
+		}
+		this.input = result;
 		return this;
 	}
 
