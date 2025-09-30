@@ -22,7 +22,7 @@ class Mockaccino {
 	private mock_name: string;
 	private mock_instance_name: string;
 	private comment_text =`/*
- * Generated with Mockaccino by SelerLabs
+ * Generated with Mockaccino by SelerLabs[TM]
  * https://github.com/Veenkar/mockaccino
  */`;
 
@@ -53,70 +53,41 @@ class Mockaccino {
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
 	}
 
+	// TODO: refactor this function by crate a function generate, which takes  fn as argument
 	public mock() {
 		if ("file" === this.uri.scheme) {
 			var mock_strings = this.getFunctionStrings((fn: any) => 
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`
 			).join("\n");
-			var impl_strings = this.getFunctionStrings((fn: any) => 
-				/* <--- SOURCE TEMPLATE */
-`${fn.returnType} ${fn.name}(${fn.arguments})
+			var impl_strings = this.getMockImplStrings().join("\n");
+			var decl_strings = this.getFunctionStrings().join("\n");
+			console.log(mock_strings);
+			this.generateMockFiles(decl_strings, mock_strings, impl_strings);
+		}
+	}
+
+	private getMockImplStrings() {
+		return this.getFunctionStrings((fn: any) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})
 {
 	assert(nullptr != ${this.mock_instance_name}Mock_, "No mock instance found, create a mock first.");
 	return ${this.name}Mock_->${fn.name}(${fn.arguments});
 }
 `
-				/* <--- SOURCE TEMPLATE */
-			).join("\n");
-			var decl_strings = this.getFunctionStrings().join("\n");
-			//console.log(mock_strings);
 			/* <--- SOURCE TEMPLATE */
-var header =
-`#ifndef ${this.caps_name}_H
-#define ${this.caps_name}_H
+		);
+	}
 
-#include "${this.header_name}"
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+	private generateMockFiles(decl_strings: string, mock_strings: string, impl_strings: string) {
+		var header = this.generateMockHeader(decl_strings, mock_strings);
 
-class ${this.mock_name} {
-public:
-	${this.mock_name}();
-	virtual ~${this.mock_name}();
-${mock_strings}
-};
-
-${this.comment_text}
-#endif /* ${this.caps_name}_H */
-`;
-
-var src =
-`#include "${this.name}_mock.h"
-#include <cassert>
-
-static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
-
-${this.mock_name}::${this.mock_name}()
-{
-	assert(nullptr == ${this.name}Mock_, "Mock instance already exists.");
-	${this.mock_instance_name}_ = this;
-}
-
-${this.mock_name}::~${this.mock_name}()
-{
-	${this.mock_instance_name}_ = nullptr;
-}
-
-${impl_strings}
-${this.comment_text}
-`;
-			/* <--- SOURCE TEMPLATE */
-
-			fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
-			fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
-			//console.log(header);
-			//console.log(src);
-		}
+		var src = this.generateMockSrc(impl_strings);
+		/* <--- SOURCE TEMPLATE */
+		fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
+		fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
+		console.log(header);
+		console.log(src);
 	}
 
 	private getFunctionStrings(stringifyFunction: (fn: any) => string = Mockaccino.defaultStringifyFunction): string[] {
@@ -168,6 +139,56 @@ ${this.comment_text}
 		}
 		return Array.isArray(args) ? args.map((arg) => parseArg(arg)).join(", ") : parseArg(args);
 	}
+
+/* === GENERATOR ZONE === */
+/* TODO: refactor to another class or mixin */
+private generateMockSrc(impl_strings: string) {
+/* SOURCE TEMPLATE ---> */
+return `#include "${this.name}_mock.h"
+#include <cassert>
+
+static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
+
+${this.mock_name}::${this.mock_name}()
+{
+	assert(nullptr == ${this.name}Mock_, "Mock instance already exists.");
+	${this.mock_instance_name}_ = this;
+}
+
+${this.mock_name}::~${this.mock_name}()
+{
+	${this.mock_instance_name}_ = nullptr;
+}
+
+${impl_strings}
+${this.comment_text}
+`;
+/* <--- END SOURCE TEMPLATE */
+}
+
+private generateMockHeader(decl_strings: string, mock_strings: string) {
+/* SOURCE TEMPLATE ---> */
+		return `#ifndef ${this.caps_name}_H
+#define ${this.caps_name}_H
+
+#include "${this.header_name}"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+${decl_strings}
+
+class ${this.mock_name} {
+public:
+	${this.mock_name}();
+	virtual ~${this.mock_name}();
+${mock_strings}
+};
+
+${this.comment_text}
+#endif /* ${this.caps_name}_H */
+`;
+/* <--- END SOURCE TEMPLATE */
+}
 }
 
 if(typeof module === "object")
