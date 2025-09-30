@@ -30,7 +30,7 @@ class Mockaccino {
 		this.content_raw = content;
 		this.uri = uri;
 		let preprocessor = new Preprocessor(this.content_raw);
-		this.content = preprocessor.preprocess().removeCompoundExpressions().get();
+		this.content = preprocessor.preprocess().get();
 		console.log("preproc:");
 		console.log(this.content);``
 
@@ -78,8 +78,6 @@ var header =
 #include "${this.header_name}"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-${decl_strings}
 
 class ${this.mock_name} {
 public:
