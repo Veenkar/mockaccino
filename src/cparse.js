@@ -221,7 +221,7 @@ var cparse = (function()
 		function parseArgumentDefinition()
 		{
 			var args = [];
-			while(definitionIncoming())
+			while(definitionIncoming() || lookaheadRe(/^[A-Za-z_][A-Za-z0-9_]*$/))
 			{
 				args.push(readDefinition());
 
