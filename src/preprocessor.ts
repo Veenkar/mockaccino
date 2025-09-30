@@ -25,7 +25,7 @@ class Preprocessor
 	removeIncludeDirectives(): Preprocessor {
 		this.input = this.input
 			.split('\n')
-			.filter(line => !/^\s*#include\b/.test(line))
+			.filter(line => !/^\s*#(include|pragma)\b/.test(line))
 			.join('\n');
 		return this;
 	}
