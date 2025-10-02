@@ -137,24 +137,34 @@ class Mockaccino {
 	}
 
 	private getFunctionStrings(stringifyFunction: (fn: FunctionInfo) => string = Mockaccino.defaultStringifyFunction): string[] {
-		const ast: any[] = parse(this.content);
-		const ast_string = JSON.stringify(ast, null, 2);
-		//console.log(`AST:\n${ast_string}`);
+		const parse_method = "AST";
+		let mappedFunctionsStrings: string[] = [];
+		let mappedFunctions: FunctionInfo[] = [];
 
-		const functionDeclarations = Array.isArray(ast)
-			? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
-			: [];
-		//console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
+		if (parse_method === "AST") {
+			const ast: any[] = parse(this.content);
+			// const ast_string = JSON.stringify(ast, null, 2);
+			//console.log(`AST:\n${ast_string}`);
+			const functionDeclarations = Array.isArray(ast)
+				? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
+				: [];
+			//console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
 
-		const mappedFunctions: FunctionInfo[] = functionDeclarations.map((fn: FunctionInfo) => ({
-			returnType: fn.defType?.modifier
-				? Mockaccino.parseArgs(fn.defType)
-				: fn.defType?.name,
-			name: fn.name,
-			arguments: Mockaccino.parseArgs(fn.arguments)
-		}));
-		const mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
-
+			mappedFunctions = functionDeclarations.map((fn: any) => ({ /* use any type, because cparse.js is not annotated */
+				returnType: fn.defType?.modifier
+					? Mockaccino.parseArgs(fn.defType)
+					: fn.defType?.name,
+				name: fn.name,
+				arguments: Mockaccino.parseArgs(fn.arguments)
+			}));
+		}
+		else{
+			const functionDeclarations = this.c_functions_strings;
+			mappedFunctions = functionDeclarations.map((fn: string) => ({
+				...Mockaccino.parseFunctionDeclaration(fn)
+			}));
+		}
+		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
 		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
 		return mappedFunctionsStrings;
 	}
