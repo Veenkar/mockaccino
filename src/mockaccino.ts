@@ -9,6 +9,7 @@ interface FunctionInfo {
 }
 
 class Mockaccino {
+	private parse_method: "AST" | "REGEX";
 	private content_raw: string;
 	private content: string;
 	private name: string;
@@ -26,9 +27,10 @@ class Mockaccino {
  * Generated with Mockaccino by SelerLabs[TM]
  * https://github.com/Veenkar/mockaccino
  */`;
- 	private initial_comment_text = "/* gmock mocks for ${filename} */";
+ 	private initial_comment_text = `/* gmock mocks for ${this.filename} */`;
 
-	constructor(content: string, uri: any) {
+	constructor(content: string, uri: any, parse_method: "AST" | "REGEX" = "REGEX") {
+		this.parse_method = parse_method;
 		this.content_raw = content;
 		this.uri = uri;
 		let preprocessor = new Preprocessor(this.content_raw);
@@ -61,18 +63,28 @@ class Mockaccino {
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
 	public mock() {
+		// let processArgumentsFunction = Mockaccino.defaultProcessArguments;
+		// if ("AST" === this.parse_method) {
+		// 	console.log("Using AST parse method.");
+		// 	processArgumentsFunction = Mockaccino.defaultProcessArguments;
+		// }
+		// else {
+		// 	console.log("Using REGEX parse method.");
+		// 	processArgumentsFunction = Mockaccino.removeArgumentName_ProcessArguments;
+		// }
+
 		if ("file" === this.uri.scheme) {
 			var mock_strings = this.getFunctionStrings((fn: FunctionInfo) => 
-				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`
+				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, Mockaccino.removeArgumentName_ProcessArguments
 			).join("\n");
 			var impl_strings = this.getMockImplStrings().join("\n");
-			var decl_strings = this.getFunctionStrings().join("\n");
+			// var decl_strings = this.getFunctionStrings(Mockaccino.defaultStringifyFunction).join("\n");
 			console.log(mock_strings);
-			this.generateMockFiles(decl_strings, mock_strings, impl_strings);
+			this.generateMockFiles(mock_strings, impl_strings);
 		}
 	}
 
-	private getMockImplStrings() {
+	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
 		return this.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
 			`${fn.returnType} ${fn.name}(${fn.arguments})
@@ -80,13 +92,13 @@ class Mockaccino {
 	assert(nullptr != ${this.mock_instance_name}Mock_, "No mock instance found, create a mock first.");
 	return ${this.name}Mock_->${fn.name}(${fn.arguments});
 }
-`
+`,
 			/* <--- SOURCE TEMPLATE */
-		);
+		processArgumentsFunction);
 	}
 
-	private generateMockFiles(decl_strings: string, mock_strings: string, impl_strings: string) {
-		var header = this.generateMockHeader(decl_strings, mock_strings);
+	private generateMockFiles(mock_strings: string, impl_strings: string) {
+		var header = this.generateMockHeader(mock_strings);
 
 		var src = this.generateMockSrc(impl_strings);
 		/* <--- SOURCE TEMPLATE */
@@ -136,15 +148,17 @@ class Mockaccino {
 		};
 	}
 
-	private getFunctionStrings(stringifyFunction: (fn: FunctionInfo) => string = Mockaccino.defaultStringifyFunction): string[] {
-		const parse_method = "AST";
+	private getFunctionStrings(
+		stringifyFunction: (fn: FunctionInfo) => string = Mockaccino.defaultStringifyFunction,
+		processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments
+	): string[] {
 		let mappedFunctionsStrings: string[] = [];
 		let mappedFunctions: FunctionInfo[] = [];
 
-		if (parse_method === "AST") {
+		if (this.parse_method === "AST") {
 			const ast: any[] = parse(this.content);
 			// const ast_string = JSON.stringify(ast, null, 2);
-			//console.log(`AST:\n${ast_string}`);
+			// console.log(`AST:\n${ast_string}`);
 			const functionDeclarations = Array.isArray(ast)
 				? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
 				: [];
@@ -158,12 +172,19 @@ class Mockaccino {
 				arguments: Mockaccino.parseArgs(fn.arguments)
 			}));
 		}
-		else{
+		else { /* REGEX method */
 			const functionDeclarations = this.c_functions_strings;
 			mappedFunctions = functionDeclarations.map((fn: string) => ({
 				...Mockaccino.parseFunctionDeclaration(fn)
 			}));
 		}
+
+		mappedFunctions = mappedFunctions.map(fn => ({
+			returnType: fn.returnType,
+			name: fn.name,
+			arguments: processArgumentsFunction(fn.arguments)
+		}));
+
 		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
 		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
 		return mappedFunctionsStrings;
@@ -172,6 +193,52 @@ class Mockaccino {
 	static defaultStringifyFunction(fn: FunctionInfo): string {
 		return `${fn.returnType} ${fn.name}(${fn.arguments});`;
 	}
+
+	static defaultProcessArguments(args: string): string {
+		// Handle empty arguments or 'void'
+		args = args.trim();
+		if (!args || args === 'void') {
+			args = '';
+		}
+		return args;
+	}
+
+	/**
+	 * static removeArgumentName_ProcessArguments(args: string): string,
+	 * Does the same that defaultProcessArguments and additionally splits the arguments by comma character,
+	 * removes argument name from each array element. Argument name is the last C identifier
+	 * in each of those argument strings (which can be a string of alphanumeric characters and underscores that cannot start with a number).
+	 * Only do the removal if there is at least one non-space character before the matched argument name.
+	 * Ensure the regex string has proper explanation comments.
+	 *
+	 * Processes argument strings by removing argument names.
+	 * Splits the arguments by comma, and for each argument, removes the last C identifier
+	 * (alphanumeric/underscore, not starting with a number) if there is at least one non-space character before it.
+	 * Example: "const char* str, int count" => "const char*, int"
+	 */
+	static removeArgumentName_ProcessArguments(args: string): string {
+		// Handle empty arguments or 'void'
+		args = Mockaccino.defaultProcessArguments(args);
+		return args.split(',')
+			.map(arg => {
+				arg = arg.trim();
+				/**
+				 * Regex explanation:
+				 * ^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$
+				 * - (.*\S) : Capture group 1, any characters ending with a non-space (the type part)
+				 * - \s+    : At least one whitespace between type and name
+				 * - ([a-zA-Z_][a-zA-Z0-9_]*) : Capture group 2, C identifier (argument name)
+				 * - $      : End of string
+				 */
+				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$/);
+				if (match) {
+					return match[1]; // Return only the type part
+				}
+				return arg; // If no match, return as is
+			})
+			.join(', ');
+	}
+
 
 
 	static parseArgs(args: any, includeName: boolean = true): string {
@@ -222,7 +289,7 @@ ${impl_strings}
 /* <--- END SOURCE TEMPLATE */
 }
 
-private generateMockHeader(decl_strings: string, mock_strings: string) {
+private generateMockHeader(mock_strings: string) {
 /* SOURCE TEMPLATE ---> */
 		return `${this.initial_comment_text}
 #ifndef ${this.caps_name}_H
@@ -231,8 +298,6 @@ private generateMockHeader(decl_strings: string, mock_strings: string) {
 #include "${this.header_name}"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-${decl_strings}
 
 class ${this.mock_name} {
 public:
