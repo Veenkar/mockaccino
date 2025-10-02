@@ -21,18 +21,24 @@ class Mockaccino {
 	private uri: any;
 	private mock_name: string;
 	private mock_instance_name: string;
-	private comment_text =`/*
+	private c_functions_strings: string[] = [];
+	private end_comment_text =`/*
  * Generated with Mockaccino by SelerLabs[TM]
  * https://github.com/Veenkar/mockaccino
  */`;
+ 	private initial_comment_text = "/* gmock mocks for ${filename} */";
 
 	constructor(content: string, uri: any) {
 		this.content_raw = content;
 		this.uri = uri;
 		let preprocessor = new Preprocessor(this.content_raw);
-		this.content = preprocessor.removeComments().preprocess().removeCompoundExpressions().filterByRoundBraces().get();
+		this.content = preprocessor.removeComments().preprocess().removeCompoundExpressions().filterByRoundBraces();
+		this.content = preprocessor.get();
+		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
 		console.log("preproc:");
 		console.log(this.content);
+		console.log("fun strings:");
+		console.log(this.c_functions_strings);
 
 		this.path = this.uri.fsPath;
 		const extIndex = this.path.lastIndexOf('.');
@@ -56,7 +62,7 @@ class Mockaccino {
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
 	public mock() {
 		if ("file" === this.uri.scheme) {
-			var mock_strings = this.getFunctionStrings((fn: any) => 
+			var mock_strings = this.getFunctionStrings((fn: FunctionInfo) => 
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`
 			).join("\n");
 			var impl_strings = this.getMockImplStrings().join("\n");
@@ -67,7 +73,7 @@ class Mockaccino {
 	}
 
 	private getMockImplStrings() {
-		return this.getFunctionStrings((fn: any) =>
+		return this.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
 			`${fn.returnType} ${fn.name}(${fn.arguments})
 {
@@ -90,7 +96,47 @@ class Mockaccino {
 		console.log(src);
 	}
 
-	private getFunctionStrings(stringifyFunction: (fn: any) => string = Mockaccino.defaultStringifyFunction): string[] {
+	/**
+	 * Parses a C function declaration string and returns a FunctionInfo object.
+	 * Example input: "int foo(char* bar, double baz)"
+	 */
+	public static parseFunctionDeclaration(declaration: string): FunctionInfo {
+		// Remove function link modifiers (extern, static) from the start
+		const cleanedDecl = declaration.replace(/^\s*(extern|static)\s+/i, '');
+
+		// Match optional return type (with modifiers), function name, and arguments
+		const regex = /^\s*([\w\s\*\&\[\]]*?)?\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+		const match = cleanedDecl.match(regex);
+
+		if (!match) {
+			return {
+				returnType: undefined,
+				name: "",
+				arguments: ""
+			};
+		}
+
+		let [, returnType, name, args] = match;
+
+		// Remove unwanted modifiers from returnType (keep const, volatile, etc.)
+		if (returnType) {
+			returnType = returnType.replace(/\b(static|extern)\b/g, '').trim();
+		}
+
+		// Handle empty arguments or 'void'
+		args = args.trim();
+		if (!args || args === 'void') {
+			args = '';
+		}
+
+		return {
+			returnType: returnType || undefined,
+			name: name.trim(),
+			arguments: args
+		};
+	}
+
+	private getFunctionStrings(stringifyFunction: (fn: FunctionInfo) => string = Mockaccino.defaultStringifyFunction): string[] {
 		const ast: any[] = parse(this.content);
 		const ast_string = JSON.stringify(ast, null, 2);
 		//console.log(`AST:\n${ast_string}`);
@@ -100,7 +146,7 @@ class Mockaccino {
 			: [];
 		//console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
 
-		const mappedFunctions: FunctionInfo[] = functionDeclarations.map((fn: any) => ({
+		const mappedFunctions: FunctionInfo[] = functionDeclarations.map((fn: FunctionInfo) => ({
 			returnType: fn.defType?.modifier
 				? Mockaccino.parseArgs(fn.defType)
 				: fn.defType?.name,
@@ -113,7 +159,7 @@ class Mockaccino {
 		return mappedFunctionsStrings;
 	}
 
-	static defaultStringifyFunction(fn: any): string {
+	static defaultStringifyFunction(fn: FunctionInfo): string {
 		return `${fn.returnType} ${fn.name}(${fn.arguments});`;
 	}
 
@@ -144,7 +190,8 @@ class Mockaccino {
 /* TODO: refactor to another class or mixin */
 private generateMockSrc(impl_strings: string) {
 /* SOURCE TEMPLATE ---> */
-return `#include "${this.name}_mock.h"
+return `${this.initial_comment_text}
+#include "${this.name}_mock.h"
 #include <cassert>
 
 static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
@@ -161,14 +208,14 @@ ${this.mock_name}::~${this.mock_name}()
 }
 
 ${impl_strings}
-${this.comment_text}
 `;
 /* <--- END SOURCE TEMPLATE */
 }
 
 private generateMockHeader(decl_strings: string, mock_strings: string) {
 /* SOURCE TEMPLATE ---> */
-		return `#ifndef ${this.caps_name}_H
+		return `${this.initial_comment_text}
+#ifndef ${this.caps_name}_H
 #define ${this.caps_name}_H
 
 #include "${this.header_name}"
@@ -184,11 +231,12 @@ public:
 ${mock_strings}
 };
 
-${this.comment_text}
+${this.end_comment_text}
 #endif /* ${this.caps_name}_H */
 `;
 /* <--- END SOURCE TEMPLATE */
 }
+
 }
 
 if(typeof module === "object")

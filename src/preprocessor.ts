@@ -10,6 +10,18 @@ class Preprocessor
 		return this.input;
 	}
 
+	mergeWhitespace(): Preprocessor {
+		this.input = this.input.replace(/\s+/g, ' ');
+		return this;
+	}
+
+	getExpressions(): string[] {
+		return this.input
+			.split(';')
+			.filter(expr => expr.trim().length > 0)
+			.map(expr => expr.trim() + ';');
+	}
+
 	filterByRoundBraces(): Preprocessor {
 		const parts = this.input.split(';');
 		const filtered = parts
