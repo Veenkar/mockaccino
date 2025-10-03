@@ -14,8 +14,10 @@ This allows easy C function mocking with gtest.
 - Written in pure TS/JS.
 - No search for or reading of the included headers is required, as the syntax parsing is based on regex.
 - Preprocessor handling is supported, so preprocessor directives from the current file are interpreted correctly
+- Unmeaningful content is removed prior to performing parsing (e.g. contents of functions)
 
 ## TODO:
+- Add support for one-line functions (without compound expressions)
 - Add reading of preprocessor statements from included files.
 - Add configuration.
 - Add a configuration option (per project) to read include paths.
