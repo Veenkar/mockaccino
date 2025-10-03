@@ -230,9 +230,13 @@ class Mockaccino {
 				 * - ([a-zA-Z_][a-zA-Z0-9_]*) : Capture group 2, C identifier (argument name)
 				 * - $      : End of string
 				 */
-				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$/);
+				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
 				if (match) {
-					return match[1]; // Return only the type part
+					let res = match[1]; // Return only the type part
+					if (match[3]) { // If there is an array part, add it back
+						res += match[3];
+					}
+					return res;
 				}
 				return arg; // If no match, return as is
 			})
