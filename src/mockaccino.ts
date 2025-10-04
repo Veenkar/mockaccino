@@ -24,9 +24,17 @@ class Mockaccino {
 	private mock_name: string;
 	private mock_instance_name: string;
 	private c_functions_strings: string[] = [];
-	private end_comment_text =`/*
+	private end_comment_text = `/**
+ * GENERATION:
  * Generated with Mockaccino by SelerLabs[TM]
+ * Date of generation: ${new Date().toISOString().slice(0, 10)}
+ *
+ * MARKETPLACE:
+ * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+ *
+ * GITHUB:
  * https://github.com/Veenkar/mockaccino
+ *
  */`;
  	private initial_comment_text: string;
 
@@ -36,7 +44,12 @@ class Mockaccino {
 		this.content_raw = content;
 		this.uri = uri;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
-		const copyright_for_generated = this.config.get('copyright').split("\n").map((line: string) => ` * ${line}`).join("\n");
+		const currentYear = new Date().getFullYear();
+		const copyright_for_generated = this.config.get('copyright')
+			.replace(/\$YEAR/g, currentYear)
+			.split("\n")
+			.map((line: string) => ` * ${line}`)
+			.join("\n");
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
@@ -330,6 +343,9 @@ ${this.mock_name}::~${this.mock_name}()
 }
 
 ${impl_strings}
+
+${this.end_comment_text}
+
 `;
 /* <--- END SOURCE TEMPLATE */
 }
