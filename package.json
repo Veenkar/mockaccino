@@ -2,7 +2,7 @@
   "name": "mockaccino",
   "displayName": "Mockaccino",
   "publisher": "SelerLabs",
-  "icon": "mockaccino.png",
+  "icon": "images/mockaccino.png",
   "description": "A gmock class generator for C-files.",
   "version": "1.1.1",
   "repository": {
