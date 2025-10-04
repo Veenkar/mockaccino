@@ -20,6 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
 		// vscode.window.showInformationMessage('Hello World from mockaccino!');
+		const config = vscode.workspace.getConfiguration('mockaccino');
 
 		const editor = vscode.window.activeTextEditor;
 		if (editor) {
@@ -29,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
 			// console.log(`Found content:\n${content}`);
 
-			let mockaccino = new Mockaccino(content, uri);
+			let mockaccino = new Mockaccino(content, uri, config);
 			mockaccino.mock();
 
 		} else {

@@ -9,6 +9,7 @@ interface FunctionInfo {
 }
 
 class Mockaccino {
+	private config: any;
 	private parse_method: "AST" | "REGEX";
 	private content_raw: string;
 	private content: string;
@@ -27,18 +28,22 @@ class Mockaccino {
  * Generated with Mockaccino by SelerLabs[TM]
  * https://github.com/Veenkar/mockaccino
  */`;
- 	private initial_comment_text = `/* gmock mocks for ${this.filename} */`;
+ 	private initial_comment_text: string;
 
-	constructor(content: string, uri: any, parse_method: "AST" | "REGEX" = "REGEX") {
-		this.parse_method = parse_method;
+	constructor(content: string, uri: any, config: any = {}) {
+		this.config = config;
+		this.parse_method = "REGEX";
 		this.content_raw = content;
 		this.uri = uri;
-		let preprocessor = new Preprocessor(this.content_raw);
+		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
+		console.log(`Add preproc: ${additional_preprocessor_directives}`);
+		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
+			${this.content_raw}`);
 		this.content = preprocessor.removeComments().preprocess().removeCompoundExpressions().filterByRoundBraces();
 		this.content = preprocessor.get();
 		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
-		console.log("preproc:");
-		console.log(this.content);
+		// console.log("preproc:");
+		// console.log(this.content);
 		console.log("fun strings:");
 		console.log(this.c_functions_strings);
 
@@ -59,6 +64,7 @@ class Mockaccino {
 		this.caps_name = this.name.toUpperCase();
 		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
+		this.initial_comment_text= `/* gmock mocks for ${this.filename} */`;
 	}
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
@@ -79,22 +85,33 @@ class Mockaccino {
 			).join("\n");
 			var impl_strings = this.getMockImplStrings().join("\n");
 			// var decl_strings = this.getFunctionStrings(Mockaccino.defaultStringifyFunction).join("\n");
-			console.log(mock_strings);
+			// console.log(mock_strings);
 			this.generateMockFiles(mock_strings, impl_strings);
 		}
 	}
 
 	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
-		return this.getFunctionStrings((fn: FunctionInfo) =>
+		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
-			`${fn.returnType} ${fn.name}(${fn.arguments})
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		processArgumentsFunction);
+
+		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+`
 {
 	assert(nullptr != ${this.mock_instance_name}Mock_, "No mock instance found, create a mock first.");
 	return ${this.name}Mock_->${fn.name}(${fn.arguments});
 }
-`,
-			/* <--- SOURCE TEMPLATE */
-		processArgumentsFunction);
+`, Mockaccino.extractArgumentName_ProcessArguments);
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
 	}
 
 	private generateMockFiles(mock_strings: string, impl_strings: string) {
@@ -104,8 +121,8 @@ class Mockaccino {
 		/* <--- SOURCE TEMPLATE */
 		fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
 		fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
-		console.log(header);
-		console.log(src);
+		// console.log(header);
+		// console.log(src);
 	}
 
 	/**
@@ -243,6 +260,29 @@ class Mockaccino {
 			.join(', ');
 	}
 
+	static extractArgumentName_ProcessArguments(args: string): string {
+		// Handle empty arguments or 'void'
+		args = Mockaccino.defaultProcessArguments(args);
+		return args.split(',')
+			.map(arg => {
+				arg = arg.trim();
+				/**
+				 * Regex explanation:
+				 * ^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$
+				 * - (.*\S) : Capture group 1, any characters ending with a non-space (the type part)
+				 * - \s+    : At least one whitespace between type and name
+				 * - ([a-zA-Z_][a-zA-Z0-9_]*) : Capture group 2, C identifier (argument name)
+				 * - $      : End of string
+				 */
+				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
+				if (match) {
+					let res = match[2]; // Return only the type part
+					return res;
+				}
+				return arg; // If no match, return as is
+			})
+			.join(', ');
+	}
 
 
 	static parseArgs(args: any, includeName: boolean = true): string {
