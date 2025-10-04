@@ -402,8 +402,10 @@ ${this.copyright}
 /* <--- END SOURCE TEMPLATE */
 /* SOURCE TEMPLATE ---> */
 	private getEndCommentText(): string {
+		const now = new Date();
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 		return `/**
- * DESCRIPTION:
  * Mock code for ${this.name}.
  * Generated with MOCKACCINO v${this.version}
  * VS Code Extension by SelerLabs[TM].
@@ -416,7 +418,7 @@ ${this.copyright}
  * ${this.filename}
  *
  * TIME:
- * ${new Date().toISOString().replace('T', ' ').slice(0, 19)}
+ * ${localTime}
  *
  * The Mockaccino extension can be found at:
  * MARKETPLACE:
@@ -424,7 +426,6 @@ ${this.copyright}
  *
  * GITHUB:
  * https://github.com/Veenkar/mockaccino
- *
  **/`;
 /* <--- END SOURCE TEMPLATE */
     }
