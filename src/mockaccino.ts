@@ -342,9 +342,9 @@ ${this.getEndCommentText()}
 
 private generateMockHeader(mock_strings: string) {
 /* SOURCE TEMPLATE ---> */
-		return `${this.initial_comment_text}
-#ifndef ${this.caps_name}_H
-#define ${this.caps_name}_H
+		return `#ifndef ${this.caps_name}_MOCK_H
+#define ${this.caps_name}_MOCK_H
+${this.initial_comment_text}
 
 #include "${this.header_name}"
 #include <gmock/gmock.h>
@@ -358,7 +358,7 @@ ${mock_strings}
 };
 
 ${this.getEndCommentText()}
-#endif /* ${this.caps_name}_H */
+#endif /* ${this.caps_name}_MOCK_H */
 `;
 /* <--- END SOURCE TEMPLATE */
 
