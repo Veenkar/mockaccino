@@ -373,8 +373,11 @@ ${this.ascii_art}
  * Mock code for ${this.name}.
  *
  * GENERATOR:
- * Mockaccino v${this.version}
+ * Mockaccino
  * https://github.com/Veenkar/mockaccino
+ *
+ * VERSION:
+ * v${this.version}
  *
  * COPYRIGHT:
 ${this.copyright}
