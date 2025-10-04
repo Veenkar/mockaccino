@@ -28,8 +28,10 @@ export function activate(context: vscode.ExtensionContext) {
 			const content = document.getText();
 			vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
 			// console.log(`Found content:\n${content}`);
+			const version = context.extension.packageJSON.version;
+			console.log(`Mockaccino version: ${version}`);
 
-			let mockaccino = new Mockaccino(content, uri, config);
+			let mockaccino = new Mockaccino(content, uri, config, version);
 			mockaccino.mock();
 
 		} else {

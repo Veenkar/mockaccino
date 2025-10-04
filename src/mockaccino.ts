@@ -26,12 +26,14 @@ class Mockaccino {
 	private c_functions_strings: string[] = [];
  	private initial_comment_text: string;
     private copyright: string;
+	private version: string;
 
-	constructor(content: string, uri: any, config: any = {}) {
+	constructor(content: string, uri: any, config: any = {}, version: string = "") {
 		this.config = config;
 		this.parse_method = "REGEX";
 		this.content_raw = content;
 		this.uri = uri;
+		this.version = version;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
@@ -371,6 +373,7 @@ ${this.ascii_art}
  * Mock code for ${this.name}.
  *
  * GENERATOR:
+ * Mockaccino v${this.version}
  * https://github.com/Veenkar/mockaccino
  *
  * COPYRIGHT:
@@ -399,7 +402,7 @@ ${this.copyright}
 		return `/**
  * DESCRIPTION:
  * Mock code for ${this.name}.
- * Generated with MOCKACCINO
+ * Generated with MOCKACCINO v${this.version}
  * VS Code Extension by SelerLabs[TM].
  *
  * WARNING:
