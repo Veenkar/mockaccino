@@ -1,6 +1,7 @@
 {
   "name": "mockaccino",
-  "displayName": "mockaccino",
+  "displayName": "Mockaccino",
+  "publisher": "SelerLabs",
   "description": "A gmock generator for C-files that creates a gmock class with all the functions from a C file with corresponding C-functions that call them.",
   "version": "1.1.0",
   "repository": {
@@ -17,12 +18,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "mockaccino.helloWorld",
+        "command": "mockaccino.mockCurrentFile",
         "title": "Mockaccino: mock current file."
       }
     ],
     "configuration": {
-      "title": "mockaccino",
+      "title": "Mockaccino",
       "type": "object",
       "properties": {
         "mockaccino.treatNoReturnValueAsCalls": {
