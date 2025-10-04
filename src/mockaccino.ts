@@ -108,7 +108,7 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	assert(nullptr != ${this.mock_instance_name}_, "No mock instance found, create a mock first.");
+	${this.caps_name}_ENSURE_MOCK_INSTANCE_EXISTS();
 	return ${this.mock_instance_name}_->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
@@ -320,14 +320,43 @@ class Mockaccino {
 private generateMockSrc(impl_strings: string) {
 /* SOURCE TEMPLATE ---> */
 return `${this.initial_comment_text}
+
+/*===========================================================================*
+ * Include headers
+ *===========================================================================*/
 #include "${this.name}_mock.h"
 #include <cassert>
 
+/*===========================================================================*
+ * Define macros
+ *===========================================================================*/
+#define ${this.caps_name}_MOCK_MISSING_WARNING \\
+	"No ${this.mock_name} instance found when calling " __FUNCTION__ \\
+	". Instantiate mock first!"
+
+#define ${this.caps_name}_MOCK_ALREADY_EXISTS_WARNING \\
+	"Mock instance of ${this.mock_name} already exists!"
+
+/*===========================================================================*
+ * Function-like macros
+ *===========================================================================*/
+#define ${this.caps_name}_ENSURE_MOCK_INSTANCE_EXISTS() \\
+	assert(nullptr != mainMock_, ${this.caps_name}_MOCK_MISSING_WARNING)
+
+#define ${this.caps_name}_ENSURE_NO_MOCK_INSTANCE() \\
+	assert(nullptr == mainMock_, ${this.caps_name}_MOCK_ALREADY_EXISTS_WARNING)
+
+/*===========================================================================*
+ * Object definitions
+ *===========================================================================*/
 static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
 
+/*===========================================================================*
+ * Constructor and Destructor
+ *===========================================================================*/
 ${this.mock_name}::${this.mock_name}()
 {
-	assert(nullptr == ${this.name}Mock_, "Mock instance already exists.");
+	${this.caps_name}_ENSURE_NO_MOCK_INSTANCE();
 	${this.mock_instance_name}_ = this;
 }
 
@@ -336,6 +365,9 @@ ${this.mock_name}::~${this.mock_name}()
 	${this.mock_instance_name}_ = nullptr;
 }
 
+/*===========================================================================*
+ * Mocked function implementations
+ *===========================================================================*/
 ${impl_strings}
 ${this.getEndCommentText()}
 `;
@@ -347,11 +379,16 @@ private generateMockHeader(mock_strings: string) {
 		return `#ifndef ${this.caps_name}_MOCK_H
 #define ${this.caps_name}_MOCK_H
 ${this.initial_comment_text}
-
+/*===========================================================================*
+ * Include headers
+ *===========================================================================*/
 #include "${this.header_name}"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+/*===========================================================================*
+ * Mock class declaration
+ *===========================================================================*/
 class ${this.mock_name} {
 public:
 	${this.mock_name}();
@@ -370,7 +407,7 @@ ${this.getEndCommentText()}
 		const now = new Date();
 		const pad = (n: number) => n.toString().padStart(2, '0');
 		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-        return `/**
+        return `/*===========================================================================*
  * ${this.name} mocks generated with:
 ${this.ascii_art}
  **
@@ -405,7 +442,7 @@ ${this.copyright}
 /* <--- END SOURCE TEMPLATE */
 /* SOURCE TEMPLATE ---> */
 	private getEndCommentText(): string {
-		return `/**
+		return `/*============================================================================*
  * Mock code for ${this.name}.
  * Generated with MOCKACCINO v${this.version}
  * VS Code Extension by SelerLabs[TM].
@@ -420,7 +457,7 @@ ${this.copyright}
  *
  * GITHUB:
  * https://github.com/Veenkar/mockaccino
- **/`;
+ *===========================================================================*/`;
 /* <--- END SOURCE TEMPLATE */
     }
 
