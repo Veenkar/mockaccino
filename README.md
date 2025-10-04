@@ -20,18 +20,28 @@ In the current version the real include files are not parsed, but the preprocess
 
 ## Features
 - Does not have any external dependencies or any other external parser or compiler.
-- Written in pure TS/JS.
+- Written in pure TypeScript!
 - No search for or reading of the included headers is required, as the syntax parsing is based on regex.
 - Preprocessor handling is supported, so preprocessor directives from the current file are interpreted correctly
 - Unmeaningful content is removed prior to performing parsing (e.g. contents of functions)
+- Since parsing does not involve AST, this extension does not have to be able to compile the file by parsing all the includes.
+- Regex parsing also gives possibility for parsing unusual C dialects, as it does not have to understand non-standard modifiers.
+- If the file that was used for generation compiles, the tests should also compile with gmock.
+- Possiblity to configure copyright statement
+- Adding custom defines before parsing the source code
+- Possibility to generate mocks from both source and header files.
+
 
 
 ## TODO:
+- Correct parsing when unknown function-like macros are used in function return type definition.
+- Remove static keyword when parsing C source files with function implementations.
 - Add support for one-line functions (without compound expressions)
 - Add reading of preprocessor statements from included files.
 - Add configuration.
 - Add a configuration option (per project) to read include paths.
 - Add possible preprecoessor pattterns that are included in every parser file that can be set in configuration. of this extension
+- Add support for generating mock classes for C++ methods.
 
 
 ## Development history
