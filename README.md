@@ -10,12 +10,38 @@ In the generated mock source file (filename_mock.cc), all the calls to the stubb
 This allows easy C function mocking with gtest.
 
 
-## Usage
-Use COMMAND PALETTE -> "Mockaccino: mock current file" to generate mock files in the same folder that have _mock appended to their name. This way a pair of a header and C++ source file are generated that can be used to mock the C code using gtest.
+## Installation
+Download the extension from VS Code marketplace:
 
+https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+
+
+## Usage
+To use Mockaccino:
+ - Install the extension from VS Code marketplace.
+ - Open a C source or heder file.
+ - Use COMMAND PALETTE -> "Mockaccino: mock current file".
+ - The mock files will be generated in the same folder that have _mock appended to their name.
+
+This way, a pair of a header and a C++ source file are generated that can be used to mock the C code using gtest.
+
+## Parsing Mechanism
+The preprocessor directives contained in the original file as well as in the prepended preprocessor directives from the settings of this extension are processed before parsing the file.
+
+In the current version the real include files are not parsed.
+This is not required because this extensions is using regex to parse the files, not relying on an AST, from the typical language parsers.
+
+Moreover, all the unnecessary content from the input files is removed prior to regex matching.
+This way, Mockaccino does not need to know the name of type indentifiers declared elsewhere prior to processing the input file.
+
+
+
+## Configuration
 In settings of this extension it is possible to configure predefined preprocessor macros that can be used with each file to help with parsing modifiers unknown to Mockaccino.
 
-In the current version the real include files are not parsed, but the preprocessor directives contained in the file as wel as in the settings, from which the mocks were generated is processed.
+Also a copyright notice for the generated files can be set.
+
+
 
 
 ## Features
@@ -51,5 +77,12 @@ In the current version the real include files are not parsed, but the preprocess
 - Due to change in the main algorithm the code has been refactored to allow implementing other parsing methods.
 
 
-## License
+## VS Code marketplace
+https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+
+## Github
+https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+
+
+# License
 Licensed using GNU GPL v3
