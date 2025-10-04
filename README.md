@@ -81,7 +81,7 @@ Also a copyright notice for the generated files can be set.
 https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
 
 ## Github
-https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+https://github.com/Veenkar/mockaccino
 
 ## Contact
 e-mail: veenkar@gmail.com
