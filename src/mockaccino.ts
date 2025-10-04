@@ -374,7 +374,7 @@ ${this.ascii_art}
  * https://github.com/Veenkar/mockaccino
  *
  * COPYRIGHT:
- * ${this.copyright}
+${this.copyright}
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
