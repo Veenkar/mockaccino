@@ -1,4 +1,4 @@
-# mockaccino README
+# MOCKACCINO
 
 Gtest mock generators for C-files.
 
@@ -9,12 +9,14 @@ The header also contains a C++ class that has mocked methods with the same name 
 In the generated mock source file (filename_mock.cc), all the calls to the stubbed C functions functions lead to the respective mock methods inside the class.
 This allows easy C function mocking with gtest.
 
+
 ## Features
 - Does not have any external dependencies or any other external parser or compiler.
 - Written in pure TS/JS.
 - No search for or reading of the included headers is required, as the syntax parsing is based on regex.
 - Preprocessor handling is supported, so preprocessor directives from the current file are interpreted correctly
 - Unmeaningful content is removed prior to performing parsing (e.g. contents of functions)
+
 
 ## TODO:
 - Add support for one-line functions (without compound expressions)
