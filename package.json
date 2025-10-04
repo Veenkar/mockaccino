@@ -37,6 +37,12 @@
           "editPresentation": "multilineText",
           "default": "#define FUNC(type, modifier, memory) modifier type",
           "description": "Additional preprocessor directives (if/elif/else, define) that will be prepended to each parsed file."
+        },
+        "mockaccino.copyright": {
+          "type": "string",
+          "editPresentation": "multilineText",
+          "default": "Copyright (c) [YEAR] [OWNER]. All rights reserved.\n\nWARNING: PLEASE REPLACE COPYRIGHT STATEMENT IN MOCKACCINO SETTINGS!",
+          "description": "Copyright text that will be included in each file."
         }
       }
     }

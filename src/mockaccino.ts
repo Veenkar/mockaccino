@@ -36,6 +36,7 @@ class Mockaccino {
 		this.content_raw = content;
 		this.uri = uri;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
+		const copyright_for_generated = this.config.get('copyright').split("\n").map((line: string) => ` * ${line}`).join("\n");
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
@@ -64,7 +65,7 @@ class Mockaccino {
 		this.caps_name = this.name.toUpperCase();
 		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
-		this.initial_comment_text= `/* gmock mocks for ${this.filename} */`;
+		this.initial_comment_text = `/**\n * DESCRIPTION:\n * Mock code for ${this.name}.\n *\n * COPYRIGHT:\n${copyright_for_generated}\n */`;
 	}
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
