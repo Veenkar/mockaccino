@@ -369,9 +369,19 @@ ${this.getEndCommentText()}
  * ${this.name} mocks generated with:
 ${this.ascii_art}
  **
+ * DESCRIPTION:
+ * Mock code for ${this.name}.
+ *
  * GENERATOR:
  * https://github.com/Veenkar/mockaccino
- * DESCRIPTION:\n * Mock code for ${this.name}.\n *\n * COPYRIGHT:\n${this.copyright}\n **/`;
+ *
+ * COPYRIGHT:
+ * ${this.copyright}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ **/`;
     }
 /* <--- END SOURCE TEMPLATE */
 
@@ -389,11 +399,16 @@ ${this.ascii_art}
 /* SOURCE TEMPLATE ---> */
 	private getEndCommentText(): string {
 		return `/**
+ * DESCRIPTION:
+ * Mock code for ${this.name}.
+ * Generated with MOCKACCINO
+ * VS Code Extension by SelerLabs[TM].
+ *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Generated with Mockaccino VS Code Extension by SelerLabs[TM].
+ * Editing it manually might result in loss of changes.
  *
- * SOURCE:
+ * INPUT:
  * ${this.filename}
  *
  * TIME:
