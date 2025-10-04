@@ -15,6 +15,7 @@ class Mockaccino {
 	private content: string;
 	private name: string;
 	private caps_name: string;
+	private caps_mock_name: string;
 	private filename: string;
 	private header_name: string;
 	private path: string;
@@ -70,6 +71,7 @@ class Mockaccino {
 		this.header_name = this.name + ".h";
 		this.caps_name = this.name.toUpperCase();
 		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
+		this.caps_mock_name = `${this.caps_name}_MOCK`;
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
         const initial_comment_text = this.getInitialCommentText();
         this.initial_comment_text = initial_comment_text;
@@ -108,7 +110,7 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	${this.caps_name}_ENSURE_MOCK_INSTANCE_EXISTS();
+	${this.caps_mock_name}_CHECK_INSTANCE_EXISTS();
 	return ${this.mock_instance_name}_->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
@@ -330,21 +332,21 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Define macros
  *===========================================================================*/
-#define ${this.caps_name}_MOCK_MISSING_WARNING \\
+#define ${this.caps_mock_name}_INSTANCE_EXISTS_WARN \\
 	"No ${this.mock_name} instance found when calling " __FUNCTION__ \\
 	". Instantiate mock first!"
 
-#define ${this.caps_name}_MOCK_ALREADY_EXISTS_WARNING \\
+#define ${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN \\
 	"Mock instance of ${this.mock_name} already exists!"
 
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
-#define ${this.caps_name}_ENSURE_MOCK_INSTANCE_EXISTS() \\
-	assert(nullptr != mainMock_, ${this.caps_name}_MOCK_MISSING_WARNING)
+#define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
+	assert(nullptr != mainMock_, ${this.caps_mock_name}_INSTANCE_EXISTS_WARN)
 
-#define ${this.caps_name}_ENSURE_NO_MOCK_INSTANCE() \\
-	assert(nullptr == mainMock_, ${this.caps_name}_MOCK_ALREADY_EXISTS_WARNING)
+#define ${this.caps_mock_name}_CHECK_NO_INSTANCE() \\
+	assert(nullptr == mainMock_, ${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN)
 
 /*===========================================================================*
  * Object definitions
@@ -356,7 +358,7 @@ static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
  *===========================================================================*/
 ${this.mock_name}::${this.mock_name}()
 {
-	${this.caps_name}_ENSURE_NO_MOCK_INSTANCE();
+	${this.caps_mock_name}_CHECK_NO_INSTANCE();
 	${this.mock_instance_name}_ = this;
 }
 
@@ -376,8 +378,8 @@ ${this.getEndCommentText()}
 
 private generateMockHeader(mock_strings: string) {
 /* SOURCE TEMPLATE ---> */
-		return `#ifndef ${this.caps_name}_MOCK_H
-#define ${this.caps_name}_MOCK_H
+		return `#ifndef ${this.caps_mock_name}_H
+#define ${this.caps_mock_name}_H
 ${this.initial_comment_text}
 /*===========================================================================*
  * Include headers
@@ -397,7 +399,7 @@ ${mock_strings}
 };
 
 ${this.getEndCommentText()}
-#endif /* ${this.caps_name}_MOCK_H */
+#endif /* ${this.caps_mock_name}_H */
 `;
 /* <--- END SOURCE TEMPLATE */
 
