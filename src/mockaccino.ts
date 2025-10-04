@@ -41,6 +41,8 @@ class Mockaccino {
 			.split("\n")
 			.map((line: string) => ` * ${line}`)
 			.join("\n");
+		this.copyright = this.copyright.replace(/[ \t]+$/gm, "");
+
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
