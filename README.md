@@ -29,10 +29,11 @@ This way, a pair of a header and a C++ source file are generated that can be use
 The preprocessor directives contained in the original file as well as in the prepended preprocessor directives from the settings of this extension are processed before parsing the file.
 
 In the current version the real include files are not parsed.
-This is not required because this extensions is using regex to parse the files, not relying on an AST, from the typical language parsers.
+This is not required because this extensions is using regex to parse the files, not relying on an AST generated from a true language parser.
+Because of this, Mockaccino does not need to know any type identifiers before parsing the original functions.
 
 Moreover, all the unnecessary content from the input files is removed prior to regex matching.
-This way, Mockaccino does not need to know the name of type indentifiers declared elsewhere prior to processing the input file.
+This way, Mockaccino does not even need to parse this part of input files, which is useless from the mock generation perspective.
 
 
 
