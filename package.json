@@ -2,7 +2,7 @@
   "name": "mockaccino",
   "displayName": "mockaccino",
   "description": "A gmock generator for C-files that creates a gmock class with all the functions from a C file with corresponding C-functions that call them.",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "repository": {
     "url": "https://github.com/Veenkar/mockaccino"
   },
