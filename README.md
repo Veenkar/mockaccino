@@ -83,6 +83,8 @@ https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
 ## Github
 https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
 
+## Contact
+e-mail: veenkar@gmail.com
 
 # License
 Licensed using GNU GPL v3
