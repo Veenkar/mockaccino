@@ -408,8 +408,8 @@ ${this.getEndCommentText()}
 		const pad = (n: number) => n.toString().padStart(2, '0');
 		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         return `/*===========================================================================*
- *
  * ${this.name} mocks generated with:
+ *
 ${this.ascii_art}
 */
 /**
