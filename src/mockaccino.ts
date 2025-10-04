@@ -32,7 +32,6 @@ class Mockaccino {
  * TIME:
  * ${new Date().toISOString().replace('T', ' ').slice(0, 19)}
  *
- *
  * The Mockaccino extension can be found at:
  * MARKETPLACE:
  * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
