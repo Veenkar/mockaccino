@@ -365,6 +365,9 @@ ${this.getEndCommentText()}
 /* SOURCE TEMPLATE ---> */
     }
     private getInitialCommentText() {
+		const now = new Date();
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         return `/**
  * ${this.name} mocks generated with:
 ${this.ascii_art}
@@ -372,12 +375,10 @@ ${this.ascii_art}
  * DESCRIPTION:
  * Mock code for ${this.name}.
  *
- * GENERATOR:
- * Mockaccino
- * https://github.com/Veenkar/mockaccino
- *
- * VERSION:
- * v${this.version}
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${localTime}
  *
  * COPYRIGHT:
 ${this.copyright}
@@ -402,9 +403,6 @@ ${this.copyright}
 /* <--- END SOURCE TEMPLATE */
 /* SOURCE TEMPLATE ---> */
 	private getEndCommentText(): string {
-		const now = new Date();
-		const pad = (n: number) => n.toString().padStart(2, '0');
-		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 		return `/**
  * Mock code for ${this.name}.
  * Generated with MOCKACCINO v${this.version}
@@ -413,12 +411,6 @@ ${this.copyright}
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
  * Editing it manually might result in loss of changes.
- *
- * INPUT:
- * ${this.filename}
- *
- * TIME:
- * ${localTime}
  *
  * The Mockaccino extension can be found at:
  * MARKETPLACE:
