@@ -104,8 +104,8 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	assert(nullptr != ${this.mock_instance_name}Mock_, "No mock instance found, create a mock first.");
-	return ${this.name}Mock_->${fn.name}(${fn.arguments});
+	assert(nullptr != ${this.mock_instance_name}_, "No mock instance found, create a mock first.");
+	return ${this.mock_instance_name}_->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
 
