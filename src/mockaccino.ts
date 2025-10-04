@@ -333,9 +333,7 @@ ${this.mock_name}::~${this.mock_name}()
 }
 
 ${impl_strings}
-
 ${this.getEndCommentText()}
-
 `;
 /* <--- END SOURCE TEMPLATE */
     }
