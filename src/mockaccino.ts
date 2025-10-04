@@ -25,10 +25,15 @@ class Mockaccino {
 	private mock_instance_name: string;
 	private c_functions_strings: string[] = [];
 	private end_comment_text = `/**
- * GENERATION:
- * Generated with Mockaccino by SelerLabs[TM]
- * Date of generation: ${new Date().toISOString().slice(0, 10)}
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Genrated with Mockaccino VS Code Extension by SelerLabs[TM].
  *
+ * TIME:
+ * ${new Date().toISOString().replace('T', ' ').slice(0, 19)}
+ *
+ *
+ * The Mockaccino extension can be found at:
  * MARKETPLACE:
  * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
  *
