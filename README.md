@@ -10,6 +10,14 @@ In the generated mock source file (filename_mock.cc), all the calls to the stubb
 This allows easy C function mocking with gtest.
 
 
+## Usage
+Use COMMAND PALETTE -> "Mockaccino: mock current file" to generate mock files in the same folder that have _mock appended to their name. This way a pair of a header and C++ source file are generated that can be used to mock the C code using gtest.
+
+In settings of this extension it is possible to configure predefined preprocessor macros that can be used with each file to help with parsing modifiers unknown to Mockaccino.
+
+In the current version the real include files are not parsed, but the preprocessor directives contained in the file as wel as in the settings, from which the mocks were generated is processed.
+
+
 ## Features
 - Does not have any external dependencies or any other external parser or compiler.
 - Written in pure TS/JS.
