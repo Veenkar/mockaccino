@@ -343,7 +343,7 @@ return `${this.initial_comment_text}
  * Function-like macros
  *===========================================================================*/
 #define ${this.caps_mock_name}_ASSERT(exp, msg) \\
-	assert((void("${this.mock_name}: " msg), exp))
+	assert((void(__FILE__ ":" __LINE__ " ${this.mock_name}: " msg), exp))
 
 #define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
