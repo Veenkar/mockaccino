@@ -333,18 +333,18 @@ return `${this.initial_comment_text}
  * Define macros
  *===========================================================================*/
 #define ${this.caps_mock_name}_INSTANCE_EXISTS_WARN \\
-	"No ${this.mock_name} instance found when calling " __FUNCTION__ "(). " \\
+	"No mock instance found when calling " __FUNCTION__ "(). " \\
 	"Instantiate mock first!"
 
 #define ${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN \\
-	"Mock instance of ${this.mock_name} already exists!"
+	"Mock instance already exists!"
 
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
 // Use (void) to silence unused warnings.
 #define ${this.caps_mock_name}_ASSERT(exp, msg) \\
-	assert((void(msg), exp))
+	assert((void("${this.mock_name}: " msg), exp))
 
 #define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
