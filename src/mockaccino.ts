@@ -332,7 +332,7 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Define macros
  *===========================================================================*/
-#define ${this.caps_mock_name}_INSTANCE_EXISTS_WARN \\
+#define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS_WARN \\
 	"No mock instance found when calling " __FUNCTION__ "(). " \\
 	"Instantiate mock first!"
 
@@ -348,7 +348,7 @@ return `${this.initial_comment_text}
 #define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
 		(nullptr != mainMock_), \\
-		${this.caps_mock_name}_INSTANCE_EXISTS_WARN \\
+		${this.caps_mock_name}_CHECK_INSTANCE_EXISTS_WARN \\
 	)
 
 #define ${this.caps_mock_name}_CHECK_NO_INSTANCE() \\
