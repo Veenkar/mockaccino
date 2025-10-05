@@ -333,7 +333,7 @@ return `${this.initial_comment_text}
  * Define macros
  *===========================================================================*/
 #define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS_WARN \\
-	"No mock instance found when calling " __FUNCTION__ "(). " \\
+	"No mock instance found when calling mocked function. " \\
 	"Instantiate mock first!"
 
 #define ${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN \\
@@ -343,7 +343,8 @@ return `${this.initial_comment_text}
  * Function-like macros
  *===========================================================================*/
 #define ${this.caps_mock_name}_ASSERT(exp, msg) \\
-	assert((void(__FILE__ ":" __LINE__ " ${this.mock_name}: " msg), exp))
+	assert((void(__FILE__ ":" __LINE__ \\
+		" ${this.mock_name}::" __FUNCTION__ "(): " msg), exp))
 
 #define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
