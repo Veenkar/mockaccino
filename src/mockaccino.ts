@@ -110,7 +110,7 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	${this.caps_mock_name}_CHECK_INSTANCE_EXISTS();
+	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
 	return ${this.mock_instance_name}_->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
@@ -332,11 +332,11 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Define macros
  *===========================================================================*/
-#define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS_WARN \\
+#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
 	"No mock instance found when calling mocked function. " \\
 	"Instantiate mock first!"
 
-#define ${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN \\
+#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
 	"Mock instance already exists!"
 
 /*===========================================================================*
@@ -346,16 +346,16 @@ return `${this.initial_comment_text}
 	assert((void(__FILE__ ":" __LINE__ \\
 		" ${this.mock_name}::" __FUNCTION__ "(): " msg), exp))
 
-#define ${this.caps_mock_name}_CHECK_INSTANCE_EXISTS() \\
+#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
 		(nullptr != mainMock_), \\
-		${this.caps_mock_name}_CHECK_INSTANCE_EXISTS_WARN \\
+		${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
 	)
 
-#define ${this.caps_mock_name}_CHECK_NO_INSTANCE() \\
+#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE() \\
 	${this.caps_mock_name}_ASSERT( \\
 		(nullptr == mainMock_), \\
-		${this.caps_mock_name}_CHECK_NO_INSTANCE_WARN \\
+		${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
 	)
 
 /*===========================================================================*
@@ -368,7 +368,7 @@ static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
  *===========================================================================*/
 ${this.mock_name}::${this.mock_name}()
 {
-	${this.caps_mock_name}_CHECK_NO_INSTANCE();
+	${this.caps_mock_name}_ASSERT_NO_INSTANCE();
 	${this.mock_instance_name}_ = this;
 }
 
