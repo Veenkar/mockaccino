@@ -41,7 +41,7 @@
         "mockaccino.copyright": {
           "type": "string",
           "editPresentation": "multilineText",
-          "default": "Copyright (c) $YEAR [ORIGINAL FILE OWNER]. All rights reserved.\n\nWARNING:\nPLEASE REPLACE COPYRIGHT STATEMENT IN MOCKACCINO SETTINGS!",
+          "default": "Copyright (c) $YEAR [INPUT FILE OWNER]. All rights reserved.\n\nWARNING:\nPLEASE REPLACE COPYRIGHT STATEMENT IN MOCKACCINO SETTINGS!",
           "description": "Copyright text that will be included in each file."
         }
       }
