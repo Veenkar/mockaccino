@@ -342,7 +342,6 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
-// Use (void) to silence unused warnings.
 #define ${this.caps_mock_name}_ASSERT(exp, msg) \\
 	assert((void("${this.mock_name}: " msg), exp))
 
