@@ -62,12 +62,9 @@ Also a copyright notice for the generated files can be set.
 
 ## TODO:
 - Correct parsing when unknown function-like macros are used in function return type definition.
-- Remove static keyword when parsing C source files with function implementations.
-- Add support for one-line functions (without compound expressions)
+- Allow skipping static functions when parsing C file
 - Add reading of preprocessor statements from included files.
-- Add configuration.
 - Add a configuration option (per project) to read include paths.
-- Add possible preprecoessor pattterns that are included in every parser file that can be set in configuration. of this extension
 - Add support for generating mock classes for C++ methods.
 
 
