@@ -343,7 +343,7 @@ return `${this.initial_comment_text}
  * Function-like macros
  *===========================================================================*/
 #define ${this.caps_mock_name}_ASSERT(func_name, exp, msg) \\
-	assert((static_cast<void>("${this.mock_name}::" func_name msg), exp))
+	assert((static_cast<void>("${this.mock_name}::" func_name "(): " msg), exp))
 
 #define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS(func_name) \\
 	${this.caps_mock_name}_ASSERT( \\
