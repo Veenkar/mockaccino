@@ -36,16 +36,6 @@ class Mockaccino {
 		this.content_raw = content;
 		this.uri = uri;
 		this.version = version;
-		this.defaultMockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
-
-		this.output_path = this.config.get('outputPath') || "";
-		this.workspace_folder = workspace_folder;
-		if (this.workspace_folder !== "") {
-			this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
-		}
-
-		console.log(`Output path: ${this.output_path}`);
-
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
@@ -95,6 +85,17 @@ class Mockaccino {
 		this.caps_mock_name = `${this.caps_name}_MOCK`;
         const initial_comment_text = this.getInitialCommentText();
         this.initial_comment_text = initial_comment_text;
+
+
+		this.defaultMockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
+
+		this.output_path = this.config.get('outputPath') || "";
+		this.workspace_folder = workspace_folder;
+		if (this.workspace_folder !== "") {
+			this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
+		}
+
+		console.log(`Output path: ${this.output_path}`);
 	}
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
