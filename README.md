@@ -60,7 +60,8 @@ Also a copyright notice for the generated files can be set.
 
 
 
-## TODO:
+## TODO:\
+- Allow processing of empty defines (currently empty define must have something, e.g. semicolon)
 - Correct parsing when unknown function-like macros are used in function return type definition.
 - Allow skipping static functions when parsing C file
 - Add reading of preprocessor statements from included files.
