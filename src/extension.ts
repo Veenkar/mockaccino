@@ -31,7 +31,13 @@ export function activate(context: vscode.ExtensionContext) {
 			const version = context.extension.packageJSON.version;
 			console.log(`Mockaccino version: ${version}`);
 
-			let mockaccino = new Mockaccino(content, uri, config, version);
+
+			let wf = "";
+			if (vscode.workspace.workspaceFolders !== undefined) {
+				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			}
+
+			let mockaccino = new Mockaccino(content, uri, config, version, wf);
 			mockaccino.mock();
 
 		} else {

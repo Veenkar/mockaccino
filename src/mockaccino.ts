@@ -1,7 +1,6 @@
 var Preprocessor = require("./preprocessor.ts");
 var parse = require("./cparse.js");
 const fs = require('fs');
-
 interface FunctionInfo {
 	returnType: string | undefined;
 	name: string;
@@ -19,8 +18,8 @@ class Mockaccino {
 	private filename: string;
 	private header_name: string;
 	private path: string;
-	private mockHeaderPath: string;
-	private mockSrcPath: string;
+	private defaultMockHeaderPath: string;
+	private defaultMockSrcPath: string;
 	private uri: any;
 	private mock_name: string;
 	private mock_instance_name: string;
@@ -28,13 +27,25 @@ class Mockaccino {
  	private initial_comment_text: string;
     private copyright: string;
 	private version: string;
+	private output_path: string = "";
+	private workspace_folder: string = "";
 
-	constructor(content: string, uri: any, config: any = {}, version: string = "") {
+	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
 		this.parse_method = "REGEX";
 		this.content_raw = content;
 		this.uri = uri;
 		this.version = version;
+		this.defaultMockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
+
+		this.output_path = this.config.get('outputPath') || "";
+		this.workspace_folder = workspace_folder;
+		if (this.workspace_folder !== "") {
+			this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
+		}
+
+		console.log(`Output path: ${this.output_path}`);
+
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
@@ -65,10 +76,10 @@ class Mockaccino {
 
 		this.path = this.uri.fsPath;
 		const extIndex = this.path.lastIndexOf('.');
-		this.mockHeaderPath = extIndex !== -1
+		this.defaultMockHeaderPath = extIndex !== -1
 			? this.path.slice(0, extIndex) + '_mock' + ".h"
 			: this.path + '_mock';
-		this.mockSrcPath = extIndex !== -1
+		this.defaultMockSrcPath = extIndex !== -1
 			? this.path.slice(0, extIndex) + '_mock' + ".cc"
 			: this.path + '_mock';
 
@@ -138,9 +149,23 @@ class Mockaccino {
 		var header = this.generateMockHeader(mock_strings);
 
 		var src = this.generateMockSrc(impl_strings);
-		/* <--- SOURCE TEMPLATE */
-		fs.writeFileSync(this.mockHeaderPath, header, { flag: 'w' });
-		fs.writeFileSync(this.mockSrcPath, src, { flag: 'w' });
+
+		if (this.output_path && this.output_path.length > 0) {
+
+			// fs.mkdirSync(this.output_path, { recursive: true });
+			let mockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
+			let mockSrcPath = this.output_path + '/' + this.name + '_mock.cc';
+			console.log(`Writing mock files to: ${mockHeaderPath} and ${mockSrcPath}`);
+			fs.writeFileSync(mockHeaderPath, header, { flag: 'w' });
+			fs.writeFileSync(mockSrcPath, src, { flag: 'w' });
+			return;
+		}
+		else {
+			fs.writeFileSync(this.defaultMockHeaderPath, header, { flag: 'w' });
+			fs.writeFileSync(this.defaultMockSrcPath, src, { flag: 'w' });
+			console.log(`Writing mock files to: ${this.defaultMockHeaderPath} and ${this.defaultMockSrcPath}`);
+		}
+
 		// console.log(header);
 		// console.log(src);
 	}
