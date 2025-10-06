@@ -72,7 +72,7 @@ class Mockaccino {
 		this.caps_name = this.name.toUpperCase();
 		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
 		this.caps_mock_name = `${this.caps_name}_MOCK`;
-		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}`;
+		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}_`;
         const initial_comment_text = this.getInitialCommentText();
         this.initial_comment_text = initial_comment_text;
 	}
@@ -110,8 +110,8 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
-	return ${this.mock_instance_name}_->${fn.name}(${fn.arguments});
+	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS("${fn.name}");
+	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
 
@@ -342,39 +342,40 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
-#define ${this.caps_mock_name}_ASSERT(exp, msg) \\
-	assert((void(__FILE__ ":" __LINE__ \\
-		" ${this.mock_name}::" __FUNCTION__ "(): " msg), exp))
+#define ${this.caps_mock_name}_ASSERT(func_name, exp, msg) \\
+	assert((static_cast<void>("${this.mock_name}::" func_name msg), exp))
 
-#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \\
+#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS(func_name) \\
 	${this.caps_mock_name}_ASSERT( \\
-		(nullptr != mainMock_), \\
+		func_name, \\
+		(nullptr != ${this.mock_instance_name}), \\
 		${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
 	)
 
-#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE() \\
+#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE(func_name) \\
 	${this.caps_mock_name}_ASSERT( \\
-		(nullptr == mainMock_), \\
+		func_name, \\
+		(nullptr == ${this.mock_instance_name}), \\
 		${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
 	)
 
 /*===========================================================================*
  * Object definitions
  *===========================================================================*/
-static ${this.mock_name} * ${this.mock_instance_name}_ = nullptr;
+static ${this.mock_name} * ${this.mock_instance_name} = nullptr;
 
 /*===========================================================================*
  * Constructor and Destructor
  *===========================================================================*/
 ${this.mock_name}::${this.mock_name}()
 {
-	${this.caps_mock_name}_ASSERT_NO_INSTANCE();
-	${this.mock_instance_name}_ = this;
+	${this.caps_mock_name}_ASSERT_NO_INSTANCE("${this.mock_name}");
+	${this.mock_instance_name} = this;
 }
 
 ${this.mock_name}::~${this.mock_name}()
 {
-	${this.mock_instance_name}_ = nullptr;
+	${this.mock_instance_name} = nullptr;
 }
 
 /*===========================================================================*
@@ -394,7 +395,9 @@ ${this.initial_comment_text}
 /*===========================================================================*
  * Include headers
  *===========================================================================*/
-#include "${this.header_name}"
+extern "C" {
+	#include "${this.header_name}"
+}
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
