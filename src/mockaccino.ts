@@ -75,9 +75,10 @@ class Mockaccino {
 		this.name = dotIndex !== -1 ? this.filename.slice(0, dotIndex) : this.filename;
 		this.header_name = this.name + ".h";
 		this.caps_name = this.name.toUpperCase();
-		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}Mock`;
+		this.mock_name = `${this.name.charAt(0).toUpperCase()}${this.name.slice(1)}`;
+		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}_mock_`;
+		this.mock_name += "_Mock";
 		this.caps_mock_name = `${this.caps_name}_MOCK`;
-		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}_`;
         const initial_comment_text = this.getInitialCommentText();
         this.initial_comment_text = initial_comment_text;
 	}
