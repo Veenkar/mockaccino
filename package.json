@@ -4,7 +4,7 @@
   "publisher": "SelerLabs",
   "icon": "images/mockaccino_icon.png",
   "description": "Mock generator for testing C code using C++ gmock classes.",
-  "version": "1.5.8",
+  "version": "1.6.0",
   "repository": {
     "url": "https://github.com/Veenkar/mockaccino"
   },
