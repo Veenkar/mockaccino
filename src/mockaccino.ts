@@ -217,6 +217,8 @@ class Mockaccino {
 			arguments: processArgumentsFunction(fn.arguments)
 		}));
 
+		mappedFunctions = mappedFunctions.filter(fn => fn.name && fn.name.trim().length > 0);
+
 		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
 		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
 		return mappedFunctionsStrings;
