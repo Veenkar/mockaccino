@@ -35,7 +35,7 @@
         "mockaccino.additionalPreprocessorDirectives": {
           "type": "string",
           "editPresentation": "multilineText",
-          "default": "#define FUNC(type, modifier, memory) modifier type",
+          "default": "#define FUNC(rettype, memclass) rettype\n#define FUNC_P2CONST(rettype, ptrclass, memclass) const rettype*\n#define FUNC_P2VAR(rettype, ptrclass, memclass) rettype*\n#define P2VAR(ptrtype, memclass, ptrclass) ptrtype*\n#define P2CONST(ptrtype, memclass, ptrclass) const ptrtype* \n#define CONSTP2VAR(ptrtype, memclass, ptrclass) ptrtype *const\n#define CONSTP2CONST(ptrtype, memclass, ptrclass) const ptrtype *const\n#define P2FUNC(rettype, ptrclass, fctname) rettype (* fctname)\n#define CONSTP2FUNC(rettype, ptrclass, fctname) rettype (*const fctname)\n#define CONST(type, memclass) const type\n#define VAR(vartype, memclass) vartype\n#define STD_ON 1\n#define STD_OFF 0\n",
           "description": "Additional preprocessor directives (if/elif/else, define) that will be prepended to each parsed file."
         },
         "mockaccino.copyright": {
