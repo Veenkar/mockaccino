@@ -52,7 +52,10 @@ class Mockaccino {
 		if (lonely_if_active) {
 			preprocessor.activateSimpleIfBlocks();
 		}
-		preprocessor.preprocess().removeCompoundExpressions().filterByRoundBraces();
+		preprocessor.preprocess();
+		preprocessor.input = additional_preprocessor_directives + "\n" + preprocessor.input;
+		preprocessor.preprocess();
+		preprocessor.removePreprocessorDirectives().removeCompoundExpressions().filterByRoundBraces();
 		this.content = preprocessor.get();
 		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
 		console.log("preproc:");
@@ -101,7 +104,8 @@ class Mockaccino {
 			).join("\n");
 			var impl_strings = this.getMockImplStrings().join("\n");
 			// var decl_strings = this.getFunctionStrings(Mockaccino.defaultStringifyFunction).join("\n");
-			// console.log(mock_strings);
+			console.log("mock strings:");
+			console.log(mock_strings);
 			this.generateMockFiles(mock_strings, impl_strings);
 		}
 	}

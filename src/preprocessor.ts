@@ -36,6 +36,14 @@ class Preprocessor
 		return this;
 	}
 
+	removePreprocessorDirectives(): Preprocessor {
+		this.input = this.input
+			.split('\n')
+			.filter(line => !line.trim().startsWith('#'))
+			.join('\n');
+		return this;
+	}
+
 	removeComments(){
 		this.removeCompoundExpressions('/*', '*/');
 		this.input = this.input
@@ -128,9 +136,23 @@ class Preprocessor
 		this.input = output.filter(line => line !== '').join('\n');
 		return this;
 	}
-	
+
+	normalizeDirectiveWhitespace(): Preprocessor {
+		this.input = this.input
+			.split('\n')
+			.map(line => {
+				if (line.trim().startsWith('#')) {
+					return line.replace(/^#\s+/, '#');
+				}
+				return line;
+			})
+			.join('\n');
+		return this;
+	}
+
 	preprocess(): Preprocessor {
 		this.mergeLineEscapes();
+		this.normalizeDirectiveWhitespace();
 		this.removeIncludeDirectives();
 		// Simple C preprocessor implementation for #define, #ifdef, #if, #elif, #else
 		const lines = this.input.split('\n');
