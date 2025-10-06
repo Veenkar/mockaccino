@@ -32,11 +32,6 @@
           "default": true,
           "description": "Treat lonely #if - #endif preprocessor directives as always active (useful for mocking conditionally compiled functions)."
         },
-        "mockaccino.treatNoReturnValueAsCalls": {
-          "type": "boolean",
-          "default": true,
-          "description": "Treat functions with no return value as calls and not functions with implicit int type."
-        },
         "mockaccino.additionalPreprocessorDirectives": {
           "type": "string",
           "editPresentation": "multilineText",
