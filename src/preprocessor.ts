@@ -94,6 +94,53 @@ class Preprocessor
 		return this;
 	}
 
+	removeLonelyIfBlocks(): Preprocessor {
+		const lines = this.input.split('\n');
+		const output: string[] = [];
+		const stack: Array<{ifIndex: number, hasElse: boolean, hasElif: boolean}> = [];
+		let i = 0;
+		while (i < lines.length) {
+			const line = lines[i].trim();
+			if (line.startsWith('#if')) {
+				stack.push({ifIndex: i, hasElse: false, hasElif: false});
+				output.push(lines[i]);
+				i++;
+				continue;
+			}
+			if (line.startsWith('#elif')) {
+				if (stack.length) stack[stack.length - 1].hasElif = true;
+				output.push(lines[i]);
+				i++;
+				continue;
+			}
+			if (line.startsWith('#else')) {
+				if (stack.length) stack[stack.length - 1].hasElse = true;
+				output.push(lines[i]);
+				i++;
+				continue;
+			}
+			if (line.startsWith('#endif')) {
+				if (stack.length) {
+					const block = stack.pop();
+					if (block && !block.hasElse && !block.hasElif) {
+						// Remove #if and #endif for lonely block
+						output[block.ifIndex] = '';
+						// Skip adding #endif
+						i++;
+						continue;
+					}
+				}
+				output.push(lines[i]);
+				i++;
+				continue;
+			}
+			output.push(lines[i]);
+			i++;
+		}
+		this.input = output.filter(l => l !== '').join('\n');
+		return this;
+	}
+	
 	preprocess(): Preprocessor {
 		this.mergeLineEscapes();
 		this.removeIncludeDirectives();

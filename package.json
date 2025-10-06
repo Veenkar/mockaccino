@@ -27,6 +27,11 @@
       "title": "Mockaccino",
       "type": "object",
       "properties": {
+        "mockaccino.treatLonelyPreprocIfAsActive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Treat lonely #if - #endif preprocessor directives as always active (useful for mocking conditionally compiled functions)."
+        },
         "mockaccino.treatNoReturnValueAsCalls": {
           "type": "boolean",
           "default": true,

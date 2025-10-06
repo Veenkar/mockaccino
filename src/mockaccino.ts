@@ -43,11 +43,16 @@ class Mockaccino {
 			.map((line: string) => ` * ${line}`)
 			.join("\n");
 		this.copyright = this.copyright.replace(/[ \t]+$/gm, "");
+		const lonely_if_active = this.config.get('treatLonelyPreprocIfAsActive');
 
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
-		this.content = preprocessor.removeComments().preprocess().removeCompoundExpressions().filterByRoundBraces();
+		preprocessor.removeComments();
+		if (lonely_if_active) {
+			preprocessor.removeLonelyIfBlocks();
+		}
+		preprocessor.preprocess().removeCompoundExpressions().filterByRoundBraces();
 		this.content = preprocessor.get();
 		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
 		// console.log("preproc:");
