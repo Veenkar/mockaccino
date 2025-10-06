@@ -115,7 +115,7 @@ class Mockaccino {
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
-	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS("${fn.name}");
+	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
 	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
@@ -347,19 +347,17 @@ return `${this.initial_comment_text}
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
-#define ${this.caps_mock_name}_ASSERT(func_name, exp, msg) \\
-	assert((static_cast<void>("${this.mock_name}::" func_name "(): " msg), exp))
+#define ${this.caps_mock_name}_ASSERT(exp, msg) \\
+	assert((static_cast<void>("${this.mock_name}: " msg), exp))
 
-#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS(func_name) \\
+#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \\
 	${this.caps_mock_name}_ASSERT( \\
-		func_name, \\
 		(nullptr != ${this.mock_instance_name}), \\
 		${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
 	)
 
-#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE(func_name) \\
+#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE() \\
 	${this.caps_mock_name}_ASSERT( \\
-		func_name, \\
 		(nullptr == ${this.mock_instance_name}), \\
 		${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
 	)
@@ -374,7 +372,7 @@ static ${this.mock_name} * ${this.mock_instance_name} = nullptr;
  *===========================================================================*/
 ${this.mock_name}::${this.mock_name}()
 {
-	${this.caps_mock_name}_ASSERT_NO_INSTANCE("${this.mock_name}");
+	${this.caps_mock_name}_ASSERT_NO_INSTANCE();
 	${this.mock_instance_name} = this;
 }
 
