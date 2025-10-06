@@ -48,15 +48,15 @@ class Mockaccino {
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
-		preprocessor.removeComments();
+		preprocessor.removeComments().mergeLineEscapes();
 		if (lonely_if_active) {
-			preprocessor.removeLonelyIfBlocks();
+			preprocessor.activateSimpleIfBlocks();
 		}
 		preprocessor.preprocess().removeCompoundExpressions().filterByRoundBraces();
 		this.content = preprocessor.get();
 		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
-		// console.log("preproc:");
-		// console.log(this.content);
+		console.log("preproc:");
+		console.log(this.content);
 		console.log("fun strings:");
 		console.log(this.c_functions_strings);
 
