@@ -46,8 +46,8 @@
         },
         "mockaccino.outputPath": {
           "type": "string",
-          "default": "${workspaceFolder}",
-          "description": "Path where mocks should be generated. If empty generate in the same location as input."
+          "default": "",
+          "description": "Path where mocks should be generated. ${workspaceFolder} variable can be used here. If empty generate in the same location as input."
         }
       }
     }
