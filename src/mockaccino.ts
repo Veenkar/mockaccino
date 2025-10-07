@@ -86,9 +86,6 @@ class Mockaccino {
         const initial_comment_text = this.getInitialCommentText();
         this.initial_comment_text = initial_comment_text;
 
-
-		this.defaultMockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
-
 		this.output_path = this.config.get('outputPath') || "";
 		this.workspace_folder = workspace_folder;
 		if (this.workspace_folder !== "") {
@@ -159,7 +156,6 @@ class Mockaccino {
 			console.log(`Writing mock files to: ${mockHeaderPath} and ${mockSrcPath}`);
 			fs.writeFileSync(mockHeaderPath, header, { flag: 'w' });
 			fs.writeFileSync(mockSrcPath, src, { flag: 'w' });
-			return;
 		}
 		else {
 			fs.writeFileSync(this.defaultMockHeaderPath, header, { flag: 'w' });
