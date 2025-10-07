@@ -88,8 +88,15 @@ class Mockaccino {
 
 		this.output_path = this.config.get('outputPath') || "";
 		this.workspace_folder = workspace_folder;
-		if (this.workspace_folder !== "") {
-			this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
+
+		if (this.output_path.includes("${workspaceFolder}")) {
+			if (this.workspace_folder === "") {
+				console.log("Not in a workspace, files will be put in the input file folder.")
+				this.output_path = "";
+			}
+			else {
+				this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
+			}
 		}
 
 		console.log(`Output path: ${this.output_path}`);
@@ -150,7 +157,7 @@ class Mockaccino {
 
 		if (this.output_path && this.output_path.length > 0) {
 
-			// fs.mkdirSync(this.output_path, { recursive: true });
+			fs.mkdirSync(this.output_path, { recursive: true });
 			let mockHeaderPath = this.output_path + '/' + this.name + '_mock.h';
 			let mockSrcPath = this.output_path + '/' + this.name + '_mock.cc';
 			console.log(`Writing mock files to: ${mockHeaderPath} and ${mockSrcPath}`);
