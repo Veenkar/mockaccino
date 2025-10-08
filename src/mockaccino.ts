@@ -5,6 +5,7 @@ interface FunctionInfo {
 	name: string;
 	arguments: string;
 	is_static: boolean;
+	is_extern: boolean;
 }
 
 class Mockaccino {
@@ -29,6 +30,7 @@ class Mockaccino {
 	private output_path: string = "";
 	private workspace_folder: string = "";
 	private skip_static_functions: boolean;
+	private skip_extern_functions: boolean;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
@@ -37,6 +39,7 @@ class Mockaccino {
 		this.version = version;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		this.skip_static_functions = this.config.get('skipStaticFunctions');
+		this.skip_extern_functions = this.config.get('skipExternFunctions');
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
 			.replace(/\$YEAR/g, currentYear)
@@ -176,6 +179,11 @@ class Mockaccino {
 			is_static = true;
 		}
 
+		let is_extern = false;
+		if (declaration && /.*extern.*/.test(declaration)) {
+			is_extern = true;
+		}
+
 		// Remove function link modifiers (extern, static) from the start
 		const cleanedDecl = declaration.replace(/^\s*(extern|static)\s+/i, '');
 
@@ -188,7 +196,8 @@ class Mockaccino {
 				returnType: undefined,
 				name: "",
 				arguments: "",
-				is_static: false
+				is_static: false,
+				is_extern: false
 			};
 		}
 
@@ -210,7 +219,8 @@ class Mockaccino {
 			returnType: returnType || undefined,
 			name: name.trim(),
 			arguments: args,
-			is_static: is_static
+			is_static: is_static,
+			is_extern: is_extern
 		};
 	}
 
@@ -231,12 +241,16 @@ class Mockaccino {
 			returnType: fn.returnType,
 			name: fn.name,
 			arguments: processArgumentsFunction(fn.arguments),
-			is_static: fn.is_static
+			is_static: fn.is_static,
+			is_extern: fn.is_extern,
 		}));
 
 		if (this.skip_static_functions) {
-			console.log("Removing static functions.")
 			mappedFunctions = mappedFunctions.filter(fn => !fn.is_static);
+		}
+
+		if (this.skip_extern_functions) {
+			mappedFunctions = mappedFunctions.filter(fn => !fn.is_extern);
 		}
 
 		const seenNames = new Set<string>();

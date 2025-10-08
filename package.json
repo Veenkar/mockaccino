@@ -37,6 +37,11 @@
           "default": true,
           "description": "Do not process functions with static specifier."
         },
+        "mockaccino.skipExternFunctions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Do not process functions with extern specifier."
+        },
         "mockaccino.additionalPreprocessorDirectives": {
           "type": "string",
           "editPresentation": "multilineText",
