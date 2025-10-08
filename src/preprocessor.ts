@@ -201,9 +201,15 @@ class Preprocessor
 				if (macros[m] !== undefined && typeof macros[m] === 'boolean') return macros[m] ? '1' : '0';
 				return m;
 			});
+			// Handle defined(MACRO) and defined MACRO
+			const definedRegex = /\bdefined\s*(?:\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)|\s+([A-Za-z_][A-Za-z0-9_]*))/g;
+			const replacedWithDefined = replaced.replace(definedRegex, (_, m1, m2) => {
+				const macro = m1 || m2;
+				return macros[macro] !== undefined ? '1' : '0';
+			});
 			try {
 				// Only allow safe expressions
-				return !!Function(`"use strict";return (${replaced})`)();
+				return !!Function(`"use strict";return (${replacedWithDefined})`)();
 			} catch {
 				return false;
 			}
