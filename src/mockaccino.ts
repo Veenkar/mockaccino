@@ -299,11 +299,7 @@ class Mockaccino {
 			// Match pointer type with no name (e.g., "char*", "const int *")
 			const pointerNoName = /^(.*\*)\s*$/;
 			// If already has a name, leave as is
-			const hasName = /[a-zA-Z_][a-zA-Z0-9_]*\s+[a-zA-Z_][a-zA-Z0-9_]*$/;
 			if (singleIdent.test(trimmed) || pointerNoName.test(trimmed)) {
-				return `${trimmed} arg${counter++}`;
-			} else if (!hasName.test(trimmed) && trimmed.length > 0) {
-				// Fallback: if not empty and doesn't look like it has a name, add one
 				return `${trimmed} arg${counter++}`;
 			}
 			return trimmed;
