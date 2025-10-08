@@ -211,7 +211,7 @@ class Preprocessor
 		for (let i = 0; i < lines.length; i++) {
 			let line = lines[i].trim();
 			if (line.startsWith('#define')) {
-				const macroMatch = line.match(/^#define\s+([A-Za-z_][A-Za-z0-9_]*)(\(([^)]*)\))?\s+(.*)$/);
+				const macroMatch = line.match(/^#define\s+([A-Za-z_][A-Za-z0-9_]*)(\(([^)]*)\))?\s*(.*)$/);
 				if (macroMatch) {
 					const [, name, , params, body] = macroMatch;
 					if (params !== undefined) {

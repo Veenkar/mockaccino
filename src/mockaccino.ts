@@ -281,7 +281,7 @@ class Mockaccino {
 		return args.split(',').map(arg => {
 			let trimmed = arg.trim();
 			// Match a single identifier (type only, no name)
-			const singleIdent = /^([a-zA-Z_][a-zA-Z0-9_]*)$/;
+			const singleIdent = /^(?:(?:const|volatile)\s+)*([a-zA-Z_][a-zA-Z0-9_]*)$/;
 			// Match pointer type with no name (e.g., "char*", "const int *")
 			const pointerNoName = /^(.*\*)\s*$/;
 			// If already has a name, leave as is
