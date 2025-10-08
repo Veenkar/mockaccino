@@ -268,7 +268,35 @@ class Mockaccino {
 		if (!args || args === 'void') {
 			args = '';
 		}
-		return args;
+		return Mockaccino.fixNoNameArguments(args);
+	}
+
+	/**
+	 * Adds argument names to unnamed arguments in a C argument string.
+	 * Splits by comma, and for each argument:
+	 * - If it contains only a single valid C identifier (alphanumeric/underscore, starts with letter/underscore), or
+	 * - If it ends with '*', 
+	 * then appends a generated name: arg1, arg2, ...
+	 * Example: "int, char*, double value" => "int arg1, char* arg2, double value"
+	 */
+	static fixNoNameArguments(args: string): string {
+		let counter = 1;
+		return args.split(',').map(arg => {
+			let trimmed = arg.trim();
+			// Match a single identifier (type only, no name)
+			const singleIdent = /^([a-zA-Z_][a-zA-Z0-9_]*)$/;
+			// Match pointer type with no name (e.g., "char*", "const int *")
+			const pointerNoName = /^(.*\*)\s*$/;
+			// If already has a name, leave as is
+			const hasName = /[a-zA-Z_][a-zA-Z0-9_]*\s+[a-zA-Z_][a-zA-Z0-9_]*$/;
+			if (singleIdent.test(trimmed) || pointerNoName.test(trimmed)) {
+				return `${trimmed} arg${counter++}`;
+			} else if (!hasName.test(trimmed) && trimmed.length > 0) {
+				// Fallback: if not empty and doesn't look like it has a name, add one
+				return `${trimmed} arg${counter++}`;
+			}
+			return trimmed;
+		}).join(', ');
 	}
 
 	/**
