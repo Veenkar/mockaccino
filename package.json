@@ -42,6 +42,11 @@
           "default": true,
           "description": "Do not process functions with extern specifier."
         },
+        "mockaccino.disableDoubleMocking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Do not mock files that already have _mock in their name."
+        },
         "mockaccino.skipFunctionsWithImplicitReturnType": {
           "type": "boolean",
           "default": false,

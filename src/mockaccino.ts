@@ -9,7 +9,7 @@ interface FunctionInfo {
 }
 
 interface GenerationResult {
-	result: boolean;
+	result: number;
 	message: string;
 	mock_count: number;
 }
@@ -131,6 +131,21 @@ class Mockaccino {
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
 	public mock(): GenerationResult {
+
+		// Skip generation if double mocking is disabled and input file name contains '_mock' before extension
+		if (this.config.disableDoubleMocking) {
+			const fileName = this.filename;
+			const dotIndex = fileName.lastIndexOf('.');
+			const baseName = dotIndex !== -1 ? fileName.slice(0, dotIndex) : fileName;
+			if (/_mock$/i.test(baseName)) {
+				return {
+					result: 1,
+					message: "Skipping generation: double mocking is disabled and file name contains '_mock'.",
+					mock_count: 0,
+				};
+			}
+		}
+
 		if ("file" === this.uri.scheme) {
 			const mock_strings_list = this.getFunctionStrings((fn: FunctionInfo) => 
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, Mockaccino.removeArgumentName_ProcessArguments
@@ -143,21 +158,21 @@ class Mockaccino {
 			this.generateMockFiles(mock_strings, impl_strings);
 			if (mock_strings_list.length > 0) {
 				return {
-					result: true,
+					result: 0,
 					message: `${mock_strings_list.length} mocks written to:\n${this.file_written} (.cc)`,
-					mock_count: mock_strings_list.length
+					mock_count: mock_strings_list.length,
 				};
 			}
 			else{
 				return {
-					result: false,
-					message: "Error while generating.",
-					mock_count: 0
+					result: 2,
+					message: "Error while generating mock file content.",
+					mock_count: 0,
 				};
 			}
 		}
 		return {
-			result: false,
+			result: 3,
 			message: "Error while generating: opened file is not a file on disk.",
 			mock_count: 0
 		};

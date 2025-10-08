@@ -39,8 +39,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 			let mockaccino = new Mockaccino(content, uri, config, version, wf);
 			const result = mockaccino.mock();
-			if (result.result) {
+			if (result.result === 0) {
 				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
+			} else if (result.result === 1) {
+				vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
 			} else {
 				vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
 			}
