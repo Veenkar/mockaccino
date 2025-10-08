@@ -41,9 +41,13 @@ class Mockaccino {
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		this.skip_static_functions = this.config.get('skipStaticFunctions');
 		this.skip_extern_functions = this.config.get('skipExternFunctions');
-		this.ignored_function_names = this.config.get('ignoredFunctionNames');
-		if (typeof this.ignored_function_names === 'string') {
-			this.ignored_function_names = this.ignored_function_names.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+		const ignored_function_names_string = this.config.get('ignoredFunctionNames');
+
+		if (typeof ignored_function_names_string === "string") {
+			this.ignored_function_names = ignored_function_names_string
+				.split(',')
+				.map((name: string) => name.trim())
+				.filter((name: string) => name.length > 0);
 		}
 
 		const currentYear = new Date().getFullYear();
