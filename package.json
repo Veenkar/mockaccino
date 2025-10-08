@@ -32,6 +32,11 @@
           "default": true,
           "description": "Treat lonely #if - #endif preprocessor directives as always active (useful for mocking conditionally compiled functions)."
         },
+        "mockaccino.skipStaticFunctions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Do not process functions with static specifier."
+        },
         "mockaccino.additionalPreprocessorDirectives": {
           "type": "string",
           "editPresentation": "multilineText",

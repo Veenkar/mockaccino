@@ -1,15 +1,14 @@
 var Preprocessor = require("./preprocessor.ts");
-var parse = require("./cparse.js");
 const fs = require('fs');
 interface FunctionInfo {
 	returnType: string | undefined;
 	name: string;
 	arguments: string;
+	is_static: boolean;
 }
 
 class Mockaccino {
 	private config: any;
-	private parse_method: "AST" | "REGEX";
 	private content_raw: string;
 	private content: string;
 	private name: string;
@@ -29,14 +28,15 @@ class Mockaccino {
 	private version: string;
 	private output_path: string = "";
 	private workspace_folder: string = "";
+	private skip_static_functions: boolean;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
-		this.parse_method = "REGEX";
 		this.content_raw = content;
 		this.uri = uri;
 		this.version = version;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
+		this.skip_static_functions = this.config.get('skipStaticFunctions');
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
 			.replace(/\$YEAR/g, currentYear)
@@ -104,16 +104,6 @@ class Mockaccino {
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
 	public mock() {
-		// let processArgumentsFunction = Mockaccino.defaultProcessArguments;
-		// if ("AST" === this.parse_method) {
-		// 	console.log("Using AST parse method.");
-		// 	processArgumentsFunction = Mockaccino.defaultProcessArguments;
-		// }
-		// else {
-		// 	console.log("Using REGEX parse method.");
-		// 	processArgumentsFunction = Mockaccino.removeArgumentName_ProcessArguments;
-		// }
-
 		if ("file" === this.uri.scheme) {
 			var mock_strings = this.getFunctionStrings((fn: FunctionInfo) => 
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, Mockaccino.removeArgumentName_ProcessArguments
@@ -179,6 +169,13 @@ class Mockaccino {
 	 * Example input: "int foo(char* bar, double baz)"
 	 */
 	public static parseFunctionDeclaration(declaration: string): FunctionInfo {
+
+		let is_static = false;
+
+		if (declaration && /.*static.*/.test(declaration)) {
+			is_static = true;
+		}
+
 		// Remove function link modifiers (extern, static) from the start
 		const cleanedDecl = declaration.replace(/^\s*(extern|static)\s+/i, '');
 
@@ -190,11 +187,13 @@ class Mockaccino {
 			return {
 				returnType: undefined,
 				name: "",
-				arguments: ""
+				arguments: "",
+				is_static: false
 			};
 		}
 
 		let [, returnType, name, args] = match;
+
 
 		// Remove unwanted modifiers from returnType (keep const, volatile, etc.)
 		if (returnType) {
@@ -210,7 +209,8 @@ class Mockaccino {
 		return {
 			returnType: returnType || undefined,
 			name: name.trim(),
-			arguments: args
+			arguments: args,
+			is_static: is_static
 		};
 	}
 
@@ -221,35 +221,32 @@ class Mockaccino {
 		let mappedFunctionsStrings: string[] = [];
 		let mappedFunctions: FunctionInfo[] = [];
 
-		if (this.parse_method === "AST") {
-			const ast: any[] = parse(this.content);
-			// const ast_string = JSON.stringify(ast, null, 2);
-			// console.log(`AST:\n${ast_string}`);
-			const functionDeclarations = Array.isArray(ast)
-				? ast.filter((node: any) => node.type === "FunctionDeclaration" || node.type === "FunctionDefinition")
-				: [];
-			//console.log(`FunctionDeclarations:\n${JSON.stringify(functionDeclarations, null, 2)}`);
-
-			mappedFunctions = functionDeclarations.map((fn: any) => ({ /* use any type, because cparse.js is not annotated */
-				returnType: fn.defType?.modifier
-					? Mockaccino.parseArgs(fn.defType)
-					: fn.defType?.name,
-				name: fn.name,
-				arguments: Mockaccino.parseArgs(fn.arguments)
-			}));
-		}
-		else { /* REGEX method */
-			const functionDeclarations = this.c_functions_strings;
-			mappedFunctions = functionDeclarations.map((fn: string) => ({
-				...Mockaccino.parseFunctionDeclaration(fn)
-			}));
-		}
+ 		/* REGEX method */
+		const functionDeclarations = this.c_functions_strings;
+		mappedFunctions = functionDeclarations.map((fn: string) => ({
+			...Mockaccino.parseFunctionDeclaration(fn)
+		}));
 
 		mappedFunctions = mappedFunctions.map(fn => ({
 			returnType: fn.returnType,
 			name: fn.name,
-			arguments: processArgumentsFunction(fn.arguments)
+			arguments: processArgumentsFunction(fn.arguments),
+			is_static: fn.is_static
 		}));
+
+		if (this.skip_static_functions) {
+			console.log("Removing static functions.")
+			mappedFunctions = mappedFunctions.filter(fn => !fn.is_static);
+		}
+
+		const seenNames = new Set<string>();
+		mappedFunctions = mappedFunctions.filter(fn => {
+			if (seenNames.has(fn.name)) {
+				return false;
+			}
+			seenNames.add(fn.name);
+			return true;
+		});
 
 		mappedFunctions = mappedFunctions.filter(fn => fn.name && fn.name.trim().length > 0);
 
