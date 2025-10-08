@@ -31,6 +31,7 @@ class Mockaccino {
 	private workspace_folder: string = "";
 	private skip_static_functions: boolean;
 	private skip_extern_functions: boolean;
+	private skip_functions_with_implicit_return_type: boolean;
 	private ignored_function_names: string[] = [];
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
@@ -41,6 +42,7 @@ class Mockaccino {
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		this.skip_static_functions = this.config.get('skipStaticFunctions');
 		this.skip_extern_functions = this.config.get('skipExternFunctions');
+		this.skip_functions_with_implicit_return_type = this.config.get('skipFunctionsWithImplicitReturnType');
 		const ignored_function_names_string = this.config.get('ignoredFunctionNames');
 
 		if (typeof ignored_function_names_string === "string") {
@@ -181,7 +183,7 @@ class Mockaccino {
 	 * Parses a C function declaration string and returns a FunctionInfo object.
 	 * Example input: "int foo(char* bar, double baz)"
 	 */
-	public static parseFunctionDeclaration(declaration: string): FunctionInfo {
+	public parseFunctionDeclaration(declaration: string): FunctionInfo {
 
 		let is_static = false;
 
@@ -195,10 +197,16 @@ class Mockaccino {
 		}
 
 		// Remove function link modifiers (extern, static) from the start
-		const cleanedDecl = declaration.replace(/^\s*(extern|static)\s+/i, '');
+		const cleanedDecl = declaration.trim().replace(/^\s*(extern|static)\s+/i, '');
 
 		// Match optional return type (with modifiers), function name, and arguments
-		const regex = /^\s*([\w\s\*\&\[\]]*?)?\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+		let regex = /^\s*([\w\s\*\&\[\]]*?\s+)?([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+		if (this.skip_functions_with_implicit_return_type) {
+			console.log("Skipping functions with implicit return type");
+			regex = /^\s*([\w\s\*\&\[\]]*?)\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+		}
+
+
 		const match = cleanedDecl.match(regex);
 
 		if (!match) {
@@ -226,7 +234,7 @@ class Mockaccino {
 		}
 
 		return {
-			returnType: returnType || undefined,
+			returnType: returnType || "int",
 			name: name.trim(),
 			arguments: args,
 			is_static: is_static,
@@ -244,7 +252,7 @@ class Mockaccino {
  		/* REGEX method */
 		const functionDeclarations = this.c_functions_strings;
 		mappedFunctions = functionDeclarations.map((fn: string) => ({
-			...Mockaccino.parseFunctionDeclaration(fn)
+			...this.parseFunctionDeclaration(fn)
 		}));
 
 		mappedFunctions = mappedFunctions.map(fn => ({

@@ -42,6 +42,11 @@
           "default": true,
           "description": "Do not process functions with extern specifier."
         },
+        "mockaccino.skipFunctionsWithImplicitReturnType": {
+          "type": "boolean",
+          "default": false,
+          "description": "Do not process functions that have implicit (int) return type, as most of them turn out to just be function-like macros used in file scope."
+        },
         "mockaccino.additionalPreprocessorDirectives": {
           "type": "string",
           "editPresentation": "multilineText",
