@@ -8,6 +8,12 @@ interface FunctionInfo {
 	is_extern: boolean;
 }
 
+interface GenerationResult {
+	result: boolean;
+	message: string;
+	mock_count: number;
+}
+
 class Mockaccino {
 	private config: any;
 	private content_raw: string;
@@ -34,6 +40,7 @@ class Mockaccino {
 	private skip_functions_with_implicit_return_type: boolean;
 	private ignored_function_names: string[] = [];
 	private localTime: string;
+	public file_written: string = "";
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
@@ -123,17 +130,37 @@ class Mockaccino {
 	}
 
 	// TODO: refactor this function by crate a function generate, which takes  fn as argument
-	public mock() {
+	public mock(): GenerationResult {
 		if ("file" === this.uri.scheme) {
-			var mock_strings = this.getFunctionStrings((fn: FunctionInfo) => 
+			const mock_strings_list = this.getFunctionStrings((fn: FunctionInfo) => 
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, Mockaccino.removeArgumentName_ProcessArguments
-			).join("\n");
-			var impl_strings = this.getMockImplStrings().join("\n");
+			);
+			const mock_strings = mock_strings_list.join("\n");
+			const impl_strings = this.getMockImplStrings().join("\n");
 			// var decl_strings = this.getFunctionStrings(Mockaccino.defaultStringifyFunction).join("\n");
 			console.log("mock strings:");
 			console.log(mock_strings);
 			this.generateMockFiles(mock_strings, impl_strings);
+			if (mock_strings_list.length > 0) {
+				return {
+					result: true,
+					message: `${mock_strings_list.length} mocks written to:\n${this.file_written} (.cc)`,
+					mock_count: mock_strings_list.length
+				};
+			}
+			else{
+				return {
+					result: false,
+					message: "Error while generating.",
+					mock_count: 0
+				};
+			}
 		}
+		return {
+			result: false,
+			message: "Error while generating: opened file is not a file on disk.",
+			mock_count: 0
+		};
 	}
 
 	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
@@ -173,12 +200,15 @@ class Mockaccino {
 			console.log(`Writing mock files to: ${mockHeaderPath} and ${mockSrcPath}`);
 			fs.writeFileSync(mockHeaderPath, header, { flag: 'w' });
 			fs.writeFileSync(mockSrcPath, src, { flag: 'w' });
+			this.file_written = mockHeaderPath;
 		}
 		else {
 			fs.writeFileSync(this.defaultMockHeaderPath, header, { flag: 'w' });
 			fs.writeFileSync(this.defaultMockSrcPath, src, { flag: 'w' });
 			console.log(`Writing mock files to: ${this.defaultMockHeaderPath} and ${this.defaultMockSrcPath}`);
+			this.file_written = this.defaultMockHeaderPath;
 		}
+		
 
 		// console.log(header);
 		// console.log(src);

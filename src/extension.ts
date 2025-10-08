@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
 			const document = editor.document;
 			const uri = document.uri;
 			const content = document.getText();
-			vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
+			// vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
 			// console.log(`Found content:\n${content}`);
 			const version = context.extension.packageJSON.version;
 			console.log(`Mockaccino version: ${version}`);
@@ -38,7 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			let mockaccino = new Mockaccino(content, uri, config, version, wf);
-			mockaccino.mock();
+			const result = mockaccino.mock();
+			if (result.result) {
+				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
+			} else {
+				vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
+			}
 
 		} else {
 			vscode.window.showWarningMessage('No active editor found.');
