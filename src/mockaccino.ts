@@ -473,11 +473,10 @@ ${this.initial_comment_text}
 /*===========================================================================*
  * Include headers
  *===========================================================================*/
+#include <gmock/gmock.h>
 extern "C" {
 	#include "${this.header_name}"
 }
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 /*===========================================================================*
  * Mock class declaration
