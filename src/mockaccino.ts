@@ -33,6 +33,7 @@ class Mockaccino {
 	private skip_extern_functions: boolean;
 	private skip_functions_with_implicit_return_type: boolean;
 	private ignored_function_names: string[] = [];
+	private localTime: string;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
@@ -52,7 +53,11 @@ class Mockaccino {
 				.filter((name: string) => name.length > 0);
 		}
 
-		const currentYear = new Date().getFullYear();
+		const now = new Date();
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		this.localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+		const currentYear = now.getFullYear();
 		this.copyright = this.config.get('copyright')
 			.replace(/\$YEAR/g, currentYear)
 			.split("\n")
@@ -514,9 +519,6 @@ ${this.getEndCommentText()}
 /* SOURCE TEMPLATE ---> */
     }
     private getInitialCommentText() {
-		const now = new Date();
-		const pad = (n: number) => n.toString().padStart(2, '0');
-		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
         return `/*===========================================================================*
  * ${this.name} mocks generated with:
  *
@@ -529,7 +531,7 @@ ${this.ascii_art}
  * GENERATOR: Mockaccino
  * VERSION: v${this.version}
  * INPUT: ${this.filename}
- * TIME: ${localTime}
+ * TIME: ${this.localTime}
  *
  * COPYRIGHT:
 ${this.copyright}
@@ -565,8 +567,11 @@ ${this.copyright}
 /**
  * DESCRIPTION:
  * Mock code for ${this.name}.
- * Generated with MOCKACCINO v${this.version}
- * VS Code Extension by SelerLabs[TM].
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
