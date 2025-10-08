@@ -56,9 +56,38 @@ class Preprocessor
 		return this;
 	}
 
-	removeExternCBlocks(): Preprocessor {
-		const regex = /extern\s*"C"\s*{([\s\S]*?)}/gi;
-		this.input = this.input.replace(regex, (_, content) => content);
+	removeExternC(): Preprocessor {
+		const regex = /extern\s*"C"\s*\{/g;
+		let input = this.input;
+		let match: RegExpExecArray | null;
+		let result = '';
+		let lastIndex = 0;
+
+		while ((match = regex.exec(input)) !== null) {
+			const start = match.index;
+			result += input.slice(lastIndex, start);
+
+			let braceCount = 1;
+			let i = regex.lastIndex;
+			const len = input.length;
+
+			while (i < len && braceCount > 0) {
+				if (input[i] === '{') braceCount++;
+				else if (input[i] === '}') braceCount--;
+				i++;
+			}
+
+			// Extract content inside braces (excluding outer braces)
+			const contentStart = match.index + match[0].length;
+			const contentEnd = i - 1;
+			if (braceCount === 0 && contentEnd >= contentStart) {
+				result += input.slice(contentStart, contentEnd);
+			}
+			lastIndex = i;
+			regex.lastIndex = i;
+		}
+		result += input.slice(lastIndex);
+		this.input = result;
 		return this;
 	}
 
