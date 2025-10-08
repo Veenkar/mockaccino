@@ -54,6 +54,11 @@
           "default": "Copyright (c) $YEAR [INPUT FILE OWNER]. All rights reserved.\n\nWARNING:\nPLEASE REPLACE COPYRIGHT STATEMENT IN MOCKACCINO SETTINGS!",
           "description": "Copyright text that will be included in each file."
         },
+        "mockaccino.ignoredFunctionNames": {
+          "type": "string",
+          "default": "main",
+          "description": "Comma-separated list of function names that should be ignored while parsing."
+        },
         "mockaccino.outputPath": {
           "type": "string",
           "default": "",

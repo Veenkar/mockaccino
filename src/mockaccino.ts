@@ -31,6 +31,7 @@ class Mockaccino {
 	private workspace_folder: string = "";
 	private skip_static_functions: boolean;
 	private skip_extern_functions: boolean;
+	private ignored_function_names: string[] = [];
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
 		this.config = config;
@@ -40,6 +41,11 @@ class Mockaccino {
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		this.skip_static_functions = this.config.get('skipStaticFunctions');
 		this.skip_extern_functions = this.config.get('skipExternFunctions');
+		this.ignored_function_names = this.config.get('ignoredFunctionNames');
+		if (typeof this.ignored_function_names === 'string') {
+			this.ignored_function_names = this.ignored_function_names.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+		}
+
 		const currentYear = new Date().getFullYear();
 		this.copyright = this.config.get('copyright')
 			.replace(/\$YEAR/g, currentYear)
@@ -251,6 +257,10 @@ class Mockaccino {
 
 		if (this.skip_extern_functions) {
 			mappedFunctions = mappedFunctions.filter(fn => !fn.is_extern);
+		}
+
+		if (this.ignored_function_names && this.ignored_function_names.length > 0) {
+			mappedFunctions = mappedFunctions.filter(fn => !this.ignored_function_names.includes(fn.name));
 		}
 
 		const seenNames = new Set<string>();
