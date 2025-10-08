@@ -557,7 +557,7 @@ ${this.copyright}
  *                         \\ \\  \\____\\ \\  \\____\\ \\  \\ \\  \\\\ \\  \\ \\  \\\\\\  \\
  *                          \\ \\_______\\ \\_______\\ \\__\\ \\__\\\\ \\__\\ \\_______\\
  *                           \\|_______|\\|_______|\\|__|\\|__| \\|__|\\|_______|
- *                              by SelerLabs[TM]`;
+ *                              by SelerLabs`;
 /* <--- END SOURCE TEMPLATE */
 /* SOURCE TEMPLATE ---> */
 	private getEndCommentText(): string {
