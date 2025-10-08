@@ -56,6 +56,12 @@ class Preprocessor
 		return this;
 	}
 
+	removeExternCBlocks(): Preprocessor {
+		const regex = /extern\s*"C"\s*{([\s\S]*?)}/gi;
+		this.input = this.input.replace(regex, (_, content) => content);
+		return this;
+	}
+
 	removeCompoundExpressions(left_brace: string = '{', right_brace: string = '}'): Preprocessor {
 		let result = '';
 		const stack: number[] = [];

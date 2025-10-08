@@ -49,7 +49,7 @@ class Mockaccino {
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
 			${this.content_raw}`);
-		preprocessor.removeComments().mergeLineEscapes();
+		preprocessor.removeComments().mergeLineEscapes().removeExternCBlocks();
 		if (lonely_if_active) {
 			preprocessor.activateSimpleIfBlocks();
 		}
