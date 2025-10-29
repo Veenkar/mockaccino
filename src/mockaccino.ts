@@ -543,29 +543,35 @@ class Mockaccino {
 
 		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 			{
-				if (!fn.returnType || fn.returnType === "void")
+				var return_type = fn.returnType;
+				/* handle implicit return type */
+				if (!return_type) {
+					return_type = "int";
+				}
+
+				var return_statement = `\n\treturn static_cast<${fn.returnType}>(0);`;
+				if (return_type.indexOf('*') !== -1)
 				{
-/* SOURCE TEMPLATE ---> */
-return `
-{
-	std::cout << __FUNCTION__ << "() stub called from ";
-	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-}
-`;
-/* <--- END SOURCE TEMPLATE */
+					return_statement = "\n\treturn nullptr;";
+				}
+				else if (return_type === "void")
+				{
+					return_statement = "";
 				}
 				else
 				{
+					/* nothing */
+				}
+
 /* SOURCE TEMPLATE ---> */
 return `
 {
 	std::cout << __FUNCTION__ << "() stub called from ";
-	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-	return static_cast<${fn.returnType}>(0);
+	std::cout << __FILE__ << ":" << __LINE__ << std::endl;${return_statement}
 }
 `;
 /* <--- END SOURCE TEMPLATE */
-				}
+
 			});
 
 		// Zip mock_decl_strs with mock_call_strs
