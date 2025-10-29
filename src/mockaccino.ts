@@ -224,56 +224,6 @@ class Mockaccino {
 		};
 	}
 
-
-	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
-		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
-			/* <--- SOURCE TEMPLATE */
-			`${fn.returnType} ${fn.name}(${fn.arguments})`,
-			/* <--- SOURCE TEMPLATE */
-		processArgumentsFunction);
-
-		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
-`
-{
-	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
-	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
-}
-`, Mockaccino.extractArgumentName_ProcessArguments);
-
-		// Zip mock_decl_strs with mock_call_strs
-		const zipped: string[] = [];
-		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
-			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
-		}
-		return zipped;
-
-	}
-
-	private getStubImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
-		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
-			/* <--- SOURCE TEMPLATE */
-			`${fn.returnType} ${fn.name}(${fn.arguments})`,
-			/* <--- SOURCE TEMPLATE */
-		Mockaccino.removeArgumentName_ProcessArguments);
-
-		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
-`
-{
-	std::cout << __FUNCTION__ << "() stub called from ";
-	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-	return static_cast<${fn.returnType}>(0);
-}
-`);
-
-		// Zip mock_decl_strs with mock_call_strs
-		const zipped: string[] = [];
-		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
-			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
-		}
-		return zipped;
-
-	}
-
 	private generateMockFiles(mock_strings: string, impl_strings: string) {
 		var header = this.generateMockHeader(mock_strings);
 
@@ -295,7 +245,6 @@ class Mockaccino {
 			console.log(`Writing mock files to: ${this.defaultMockHeaderPath} and ${this.defaultMockSrcPath}`);
 			this.file_written = this.defaultMockHeaderPath;
 		}
-		
 
 		// console.log(header);
 		// console.log(src);
@@ -559,6 +508,75 @@ class Mockaccino {
 
 /* === GENERATOR ZONE === */
 /* TODO: refactor to another class or mixin */
+	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
+		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		processArgumentsFunction);
+
+/* SOURCE TEMPLATE ---> */
+		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+`
+{
+	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
+	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
+}
+`, Mockaccino.extractArgumentName_ProcessArguments);
+/* <--- END SOURCE TEMPLATE */
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
+	}
+
+	private getStubImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.removeArgumentName_ProcessArguments): string[] {
+		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		processArgumentsFunction);
+
+		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+			{
+				if (!fn.returnType || fn.returnType === "void")
+				{
+/* SOURCE TEMPLATE ---> */
+return `
+{
+	std::cout << __FUNCTION__ << "() stub called from ";
+	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+}
+`;
+/* <--- END SOURCE TEMPLATE */
+				}
+				else
+				{
+/* SOURCE TEMPLATE ---> */
+return `
+{
+	std::cout << __FUNCTION__ << "() stub called from ";
+	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+	return static_cast<${fn.returnType}>(0);
+}
+`;
+/* <--- END SOURCE TEMPLATE */
+				}
+			});
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
+	}
+
 private generateMockSrc(impl_strings: string) {
 	const initial_comment_text = this.getInitialCommentText();
 /* SOURCE TEMPLATE ---> */
