@@ -26,11 +26,11 @@ class Mockaccino {
 	private path: string;
 	private defaultMockHeaderPath: string;
 	private defaultMockSrcPath: string;
+	private defaultStubSrcPath: string;
 	private uri: any;
 	private mock_name: string;
 	private mock_instance_name: string;
 	private c_functions_strings: string[] = [];
- 	private initial_comment_text: string;
     private copyright: string;
 	private version: string;
 	private output_path: string = "";
@@ -99,6 +99,9 @@ class Mockaccino {
 		this.defaultMockSrcPath = extIndex !== -1
 			? this.path.slice(0, extIndex) + '_mock' + ".cc"
 			: this.path + '_mock';
+		this.defaultStubSrcPath = extIndex !== -1
+			? this.path.slice(0, extIndex) + '_stub' + ".cc"
+			: this.path + '_stub';
 
 		const pathParts = this.path.split(/[\\/]/);
 		this.filename = pathParts[pathParts.length - 1];
@@ -110,8 +113,6 @@ class Mockaccino {
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}_mock_`;
 		this.mock_name += "_Mock";
 		this.caps_mock_name = `${this.caps_name}_MOCK`;
-        const initial_comment_text = this.getInitialCommentText();
-        this.initial_comment_text = initial_comment_text;
 
 		this.output_path = this.config.get('outputPath') || "";
 		this.workspace_folder = workspace_folder;
@@ -178,6 +179,52 @@ class Mockaccino {
 		};
 	}
 
+	// TODO: refactor this function by crate a function generate, which takes  fn as argument
+	public stub(): GenerationResult {
+
+		// Skip generation if double mocking is disabled and input file name contains '_mock' before extension
+		if (this.config.disableDoubleMocking) {
+			const fileName = this.filename;
+			const dotIndex = fileName.lastIndexOf('.');
+			const baseName = dotIndex !== -1 ? fileName.slice(0, dotIndex) : fileName;
+			if (/_stub$/i.test(baseName)) {
+				return {
+					result: 1,
+					message: "Skipping generation: double mocking is disabled and file name contains '_stub'.",
+					mock_count: 0,
+				};
+			}
+		}
+
+		if ("file" === this.uri.scheme) {
+			const stub_strings_list = this.getStubImplStrings();
+			const stub_strings = stub_strings_list.join("\n");
+			console.log("stub strings:");
+			console.log(stub_strings);
+			this.generateStubFiles(stub_strings);
+			if (stub_strings_list.length > 0) {
+				return {
+					result: 0,
+					message: `${stub_strings_list.length} stubs written to:\n${this.file_written} (.cc)`,
+					mock_count: stub_strings_list.length,
+				};
+			}
+			else{
+				return {
+					result: 2,
+					message: "Error while generating mock file content.",
+					mock_count: 0,
+				};
+			}
+		}
+		return {
+			result: 3,
+			message: "Error while generating: opened file is not a file on disk.",
+			mock_count: 0
+		};
+	}
+
+
 	private getMockImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
 		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
@@ -192,6 +239,31 @@ class Mockaccino {
 	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
 }
 `, Mockaccino.extractArgumentName_ProcessArguments);
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
+	}
+
+	private getStubImplStrings(processArgumentsFunction: (args: string) => string = Mockaccino.defaultProcessArguments): string[] {
+		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		Mockaccino.removeArgumentName_ProcessArguments);
+
+		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+`
+{
+	std::cout << __FUNCTION__ << "() stub called from ";
+	std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+	return static_cast<${fn.returnType}>(0);
+}
+`);
 
 		// Zip mock_decl_strs with mock_call_strs
 		const zipped: string[] = [];
@@ -224,6 +296,27 @@ class Mockaccino {
 			this.file_written = this.defaultMockHeaderPath;
 		}
 		
+
+		// console.log(header);
+		// console.log(src);
+	}
+
+	private generateStubFiles(stub_strings: string) {
+		var src = this.generateStubSrc(stub_strings);
+
+		if (this.output_path && this.output_path.length > 0) {
+
+			fs.mkdirSync(this.output_path, { recursive: true });
+			let stubSrcPath = this.output_path + '/' + this.name + '_stub.cc';
+			console.log(`Writing stub file to: ${stubSrcPath}`);
+			fs.writeFileSync(stubSrcPath, src, { flag: 'w' });
+			this.file_written = stubSrcPath;
+		}
+		else {
+			fs.writeFileSync(this.defaultStubSrcPath, src, { flag: 'w' });
+			console.log(`Writing stub files to: ${this.defaultStubSrcPath}`);
+			this.file_written = this.defaultStubSrcPath;
+		}
 
 		// console.log(header);
 		// console.log(src);
@@ -442,7 +535,6 @@ class Mockaccino {
 			.join(', ');
 	}
 
-
 	static parseArgs(args: any, includeName: boolean = true): string {
 		function parseArg(arg: any): string {
 			const mods = arg?.modifier?.filter((node: any) => node !== "static" && node.type !== "extern");
@@ -468,8 +560,9 @@ class Mockaccino {
 /* === GENERATOR ZONE === */
 /* TODO: refactor to another class or mixin */
 private generateMockSrc(impl_strings: string) {
+	const initial_comment_text = this.getInitialCommentText();
 /* SOURCE TEMPLATE ---> */
-return `${this.initial_comment_text}
+return `${initial_comment_text}
 
 /*===========================================================================*
  * Include headers
@@ -533,11 +626,12 @@ ${this.getEndCommentText()}
 /* <--- END SOURCE TEMPLATE */
     }
 
-private generateMockHeader(mock_strings: string) {
+private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
+	const initial_comment_text = this.getInitialCommentText(header_type_name);
 /* SOURCE TEMPLATE ---> */
 		return `#ifndef ${this.caps_mock_name}_H
 #define ${this.caps_mock_name}_H
-${this.initial_comment_text}
+${initial_comment_text}
 /*===========================================================================*
  * Include headers
  *===========================================================================*/
@@ -547,7 +641,7 @@ extern "C" {
 }
 
 /*===========================================================================*
- * Mock class declaration
+ * ${header_type_name} class declaration
  *===========================================================================*/
 class ${this.mock_name} {
 public:
@@ -561,17 +655,19 @@ ${this.getEndCommentText()}
 `;
 /* <--- END SOURCE TEMPLATE */
 
-/* SOURCE TEMPLATE ---> */
+
     }
-    private getInitialCommentText() {
+    private getInitialCommentText(header_type_name: string = "Mock") {
+		const header_type_name_lower = header_type_name.toLowerCase();
+/* SOURCE TEMPLATE ---> */
         return `/*===========================================================================*
- * ${this.name} mocks generated with:
+ * ${this.name} ${header_type_name_lower} generated with:
  *
 ${this.ascii_art}
  */
 /**
  * DESCRIPTION:
- * Mock code for ${this.name}.
+ * ${header_type_name} code for ${this.name}.
  *
  * GENERATOR: Mockaccino
  * VERSION: v${this.version}
@@ -607,11 +703,11 @@ ${this.copyright}
  *                              by SelerLabs`;
 /* <--- END SOURCE TEMPLATE */
 /* SOURCE TEMPLATE ---> */
-	private getEndCommentText(): string {
+	private getEndCommentText(header_type_name: string = "Mock"): string {
 		return `/*===========================================================================*/
 /**
  * DESCRIPTION:
- * Mock code for ${this.name}.
+ * ${header_type_name} code for ${this.name}.
  *
  * GENERATOR: Mockaccino
  * VERSION: v${this.version}
@@ -633,6 +729,25 @@ ${this.copyright}
 /* <--- END SOURCE TEMPLATE */
     }
 
+private generateStubSrc(stub_strings: string) {
+	const initial_comment_text = this.getInitialCommentText("Stub");
+/* SOURCE TEMPLATE ---> */
+return `${initial_comment_text}
+
+/*===========================================================================*
+ * Include headers
+ *===========================================================================*/
+#include "${this.name}.h"
+#include <iostream>
+
+/*===========================================================================*
+ * Stubbed function implementations
+ *===========================================================================*/
+${stub_strings}
+${this.getEndCommentText("Stub")}
+`;
+/* <--- END SOURCE TEMPLATE */
+    }
 }
 
 

@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('mockaccino.mockCurrentFile', () => {
+	const mock_command = vscode.commands.registerCommand('mockaccino.mockCurrentFile', () => {
 		// The code you place here will be executed every time your command is executed
 		// Display a message box to the user
 		const config = vscode.workspace.getConfiguration('mockaccino');
@@ -50,9 +50,49 @@ export function activate(context: vscode.ExtensionContext) {
 		} else {
 			vscode.window.showWarningMessage('No active editor found.');
 		}
-});
+	});
 
-	context.subscriptions.push(disposable);
+	// The command has been defined in the package.json file
+	// Now provide the implementation of the command with registerCommand
+	// The commandId parameter must match the command field in package.json
+	const stub_command = vscode.commands.registerCommand('mockaccino.stubCurrentFile', () => {
+		// The code you place here will be executed every time your command is executed
+		// Display a message box to the user
+		const config = vscode.workspace.getConfiguration('mockaccino');
+
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			const document = editor.document;
+			const uri = document.uri;
+			const content = document.getText();
+			// vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
+			// console.log(`Found content:\n${content}`);
+			const version = context.extension.packageJSON.version;
+			console.log(`Mockaccino version: ${version}`);
+
+
+			let wf = "";
+			if (vscode.workspace.workspaceFolders !== undefined) {
+				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			}
+
+			let mockaccino = new Mockaccino(content, uri, config, version, wf);
+			const result = mockaccino.stub();
+			if (result.result === 0) {
+				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
+			} else if (result.result === 1) {
+				vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
+			} else {
+				vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
+			}
+
+		} else {
+			vscode.window.showWarningMessage('No active editor found.');
+		}
+	});
+
+	context.subscriptions.push(mock_command);
+	context.subscriptions.push(stub_command);
 }
 
 

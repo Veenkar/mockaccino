@@ -21,6 +21,10 @@
       {
         "command": "mockaccino.mockCurrentFile",
         "title": "Mockaccino: mock current file."
+      },
+      {
+        "command": "mockaccino.stubCurrentFile",
+        "title": "Mockaccino: stub current file."
       }
     ],
     "configuration": {
