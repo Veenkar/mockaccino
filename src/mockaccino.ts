@@ -21,6 +21,7 @@ class Mockaccino {
 	private name: string;
 	private caps_name: string;
 	private caps_mock_name: string;
+	private caps_stub_name: string;
 	private filename: string;
 	private header_name: string;
 	private path: string;
@@ -113,6 +114,7 @@ class Mockaccino {
 		this.mock_instance_name = `${this.mock_name.charAt(0).toLowerCase()}${this.mock_name.slice(1)}_mock_`;
 		this.mock_name += "_Mock";
 		this.caps_mock_name = `${this.caps_name}_MOCK`;
+		this.caps_stub_name = `${this.caps_name}_STUB`;
 
 		this.output_path = this.config.get('outputPath') || "";
 		this.workspace_folder = workspace_folder;
@@ -566,8 +568,7 @@ class Mockaccino {
 /* SOURCE TEMPLATE ---> */
 return `
 {
-	std::cout << __FUNCTION__ << "() stub called from ";
-	std::cout << __FILE__ << ":" << __LINE__ << std::endl;${return_statement}
+	${this.caps_stub_name}_PRINT_INFO();${return_statement}
 }
 `;
 /* <--- END SOURCE TEMPLATE */
@@ -763,6 +764,15 @@ return `${initial_comment_text}
  *===========================================================================*/
 #include "${this.name}.h"
 #include <iostream>
+
+/*===========================================================================*
+ * Function-like macros
+ *===========================================================================*/
+#define ${this.caps_stub_name}_PRINT_INFO() \\
+( \\
+	std::cout << __FUNCTION__ << "() stub called. " \\
+	"Stub location: " << __FILE__ << ":" << __LINE__ << std::endl \\
+)
 
 /*===========================================================================*
  * Stubbed function implementations
