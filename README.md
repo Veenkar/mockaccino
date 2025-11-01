@@ -56,13 +56,6 @@ Also a copyright notice for the generated files can be set.
 - Adding custom defines before parsing the source code
 - Possibility to generate mocks from both source and header files.
 
-
-## Development history
-- Two parsing methods have been implemented, but currently only the stable one is used: Regex
-- The other parsing method is AST based on cparser javascript project, but it did not support full C syntax and refused to parse unknown types (that would be declared in another header)
-- Due to change in the main algorithm the code has been refactored to allow implementing other parsing methods.
-- Should be relatively easy to generate other input (e.g. stubs) based on the current parsed objects and changing only generators
-
 ## VS Code marketplace
 https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
 
