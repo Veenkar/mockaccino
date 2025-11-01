@@ -2,9 +2,9 @@
 
 Gtest mock generators for C-files.
 
-Generates a mock header and source file with mocked methods from the original file.
+Generates a mock header and source file with mocked functions from the original C langauge file.
 
-The header also contains a C++ class that has mocked methods with the same name and signatures as the original functions.
+The header contains a C++ class that has mocked methods with the same name and signatures as the original functions.
 
 In the generated mock source file (filename_mock.cc), all the calls to the stubbed C functions functions lead to the respective mock methods inside the class.
 This allows easy C function mocking with gtest.
@@ -43,8 +43,6 @@ In settings of this extension it is possible to configure predefined preprocesso
 Also a copyright notice for the generated files can be set.
 
 
-
-
 ## Features
 - Does not have any external dependencies or any other external parser or compiler.
 - Written in pure TypeScript!
@@ -57,16 +55,6 @@ Also a copyright notice for the generated files can be set.
 - Possiblity to configure copyright statement
 - Adding custom defines before parsing the source code
 - Possibility to generate mocks from both source and header files.
-
-
-
-## TODO:
-- Allow processing of empty defines (currently empty define must have something, e.g. semicolon)
-- Correct parsing when unknown function-like macros are used in function return type definition.
-- Allow skipping static functions when parsing C file
-- Add reading of preprocessor statements from included files.
-- Add a configuration option (per project) to read include paths.
-- Add support for generating mock classes for C++ methods.
 
 
 ## Development history
