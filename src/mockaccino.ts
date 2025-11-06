@@ -585,7 +585,31 @@ return `
 	}
 
 private generateMockSrc(impl_strings: string) {
-	const initial_comment_text = this.getInitialCommentText();
+	const header_type_name = "Mock";
+	const header_type_name_lower = header_type_name.toLowerCase();
+/* SOURCE TEMPLATE ---> */
+	const initial_comment_text = `/*===========================================================================*
+ * ${this.name} ${header_type_name_lower} generated with:
+ *
+${this.ascii_art}
+ */
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * COPYRIGHT:
+${this.copyright}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ **/`;
+
 /* SOURCE TEMPLATE ---> */
 return `${initial_comment_text}
 
@@ -652,7 +676,30 @@ ${this.getEndCommentText()}
     }
 
 private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
-	const initial_comment_text = this.getInitialCommentText(header_type_name);
+	const header_type_name_lower = header_type_name.toLowerCase();
+/* SOURCE TEMPLATE ---> */
+	const initial_comment_text = `/*===========================================================================*
+ * ${this.name} ${header_type_name_lower} generated with:
+ *
+${this.ascii_art}
+ */
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * COPYRIGHT:
+${this.copyright}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ **/`;
+
 /* SOURCE TEMPLATE ---> */
 		return `#ifndef ${this.caps_mock_name}_H
 #define ${this.caps_mock_name}_H
@@ -682,32 +729,6 @@ ${this.getEndCommentText()}
 
 
     }
-    private getInitialCommentText(header_type_name: string = "Mock") {
-		const header_type_name_lower = header_type_name.toLowerCase();
-/* SOURCE TEMPLATE ---> */
-        return `/*===========================================================================*
- * ${this.name} ${header_type_name_lower} generated with:
- *
-${this.ascii_art}
- */
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * COPYRIGHT:
-${this.copyright}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- **/`;
-    }
-/* <--- END SOURCE TEMPLATE */
 
 /* SOURCE TEMPLATE ---> */
 	private ascii_art =
@@ -755,7 +776,32 @@ ${this.copyright}
     }
 
 private generateStubSrc(stub_strings: string) {
-	const initial_comment_text = this.getInitialCommentText("Stub");
+	const header_type_name = "Stub";
+
+	const header_type_name_lower = header_type_name.toLowerCase();
+/* SOURCE TEMPLATE ---> */
+	const initial_comment_text = `/*===========================================================================*
+ * ${this.name} ${header_type_name_lower} generated with:
+ *
+${this.ascii_art}
+ */
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * COPYRIGHT:
+${this.copyright}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ **/`;
+
 /* SOURCE TEMPLATE ---> */
 return `${initial_comment_text}
 
