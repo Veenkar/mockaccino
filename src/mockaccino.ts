@@ -587,8 +587,9 @@ return `
 private generateMockSrc(impl_strings: string) {
 	const header_type_name = "Mock";
 	const header_type_name_lower = header_type_name.toLowerCase();
+
 /* SOURCE TEMPLATE ---> */
-	const initial_comment_text = `/*===========================================================================*
+return `/*===========================================================================*
  * ${this.name} ${header_type_name_lower} generated with:
  *
 ${this.ascii_art}
@@ -608,10 +609,7 @@ ${this.copyright}
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
  * Editing it manually might result in loss of changes.
- **/`;
-
-/* SOURCE TEMPLATE ---> */
-return `${initial_comment_text}
+ **/
 
 /*===========================================================================*
  * Include headers
@@ -670,15 +668,39 @@ ${this.mock_name}::~${this.mock_name}()
  * Mocked function implementations
  *===========================================================================*/
 ${impl_strings}
-${this.getEndCommentText()}
+/*===========================================================================*/
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ *
+ * The Mockaccino extension can be found at:
+ * MARKETPLACE:
+ * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+ *
+ * GITHUB:
+ * https://github.com/Veenkar/mockaccino
+ *
+ *===========================================================================*/
 `;
 /* <--- END SOURCE TEMPLATE */
     }
 
 private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
 	const header_type_name_lower = header_type_name.toLowerCase();
+
 /* SOURCE TEMPLATE ---> */
-	const initial_comment_text = `/*===========================================================================*
+		return `#ifndef ${this.caps_mock_name}_H
+#define ${this.caps_mock_name}_H
+/*===========================================================================*
  * ${this.name} ${header_type_name_lower} generated with:
  *
 ${this.ascii_art}
@@ -698,12 +720,7 @@ ${this.copyright}
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
  * Editing it manually might result in loss of changes.
- **/`;
-
-/* SOURCE TEMPLATE ---> */
-		return `#ifndef ${this.caps_mock_name}_H
-#define ${this.caps_mock_name}_H
-${initial_comment_text}
+ **/
 /*===========================================================================*
  * Include headers
  *===========================================================================*/
@@ -722,7 +739,28 @@ public:
 ${mock_strings}
 };
 
-${this.getEndCommentText()}
+/*===========================================================================*/
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ *
+ * The Mockaccino extension can be found at:
+ * MARKETPLACE:
+ * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+ *
+ * GITHUB:
+ * https://github.com/Veenkar/mockaccino
+ *
+ *===========================================================================*/
 #endif /* ${this.caps_mock_name}_H */
 `;
 /* <--- END SOURCE TEMPLATE */
@@ -748,39 +786,13 @@ ${this.getEndCommentText()}
  *                           \\|_______|\\|_______|\\|__|\\|__| \\|__|\\|_______|
  *                              by SelerLabs`;
 /* <--- END SOURCE TEMPLATE */
-/* SOURCE TEMPLATE ---> */
-	private getEndCommentText(header_type_name: string = "Mock"): string {
-		return `/*===========================================================================*/
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- *
- * The Mockaccino extension can be found at:
- * MARKETPLACE:
- * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
- *
- * GITHUB:
- * https://github.com/Veenkar/mockaccino
- *
- *===========================================================================*/`;
-/* <--- END SOURCE TEMPLATE */
-    }
 
 private generateStubSrc(stub_strings: string) {
 	const header_type_name = "Stub";
-
 	const header_type_name_lower = header_type_name.toLowerCase();
+
 /* SOURCE TEMPLATE ---> */
-	const initial_comment_text = `/*===========================================================================*
+return `/*===========================================================================*
  * ${this.name} ${header_type_name_lower} generated with:
  *
 ${this.ascii_art}
@@ -800,10 +812,7 @@ ${this.copyright}
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
  * Editing it manually might result in loss of changes.
- **/`;
-
-/* SOURCE TEMPLATE ---> */
-return `${initial_comment_text}
+ **/
 
 /*===========================================================================*
  * C++ Include headers
@@ -832,7 +841,28 @@ extern "C" {
 
 ${stub_strings}
 } /* extern "C" */
-${this.getEndCommentText("Stub")}
+/*===========================================================================*/
+/**
+ * DESCRIPTION:
+ * ${header_type_name} code for ${this.name}.
+ *
+ * GENERATOR: Mockaccino
+ * VERSION: v${this.version}
+ * INPUT: ${this.filename}
+ * TIME: ${this.localTime}
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
+ *
+ * The Mockaccino extension can be found at:
+ * MARKETPLACE:
+ * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+ *
+ * GITHUB:
+ * https://github.com/Veenkar/mockaccino
+ *
+ *===========================================================================*/
 `;
 /* <--- END SOURCE TEMPLATE */
     }
