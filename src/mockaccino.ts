@@ -1,5 +1,8 @@
 var Preprocessor = require("./preprocessor.ts");
+var Interpolator = require("./interpolator.ts");
 const fs = require('fs');
+const path = require('path');
+
 interface FunctionInfo {
 	returnType: string | undefined;
 	name: string;
@@ -42,8 +45,9 @@ class Mockaccino {
 	private ignored_function_names: string[] = [];
 	private localTime: string;
 	public file_written: string = "";
+	private template_path: string;
 
-	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "") {
+	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
 		this.content_raw = content;
 		this.uri = uri;
@@ -118,6 +122,7 @@ class Mockaccino {
 
 		this.output_path = this.config.get('outputPath') || "";
 		this.workspace_folder = workspace_folder;
+		this.template_path = template_path;
 
 		if (this.output_path.includes("${workspaceFolder}")) {
 			if (this.workspace_folder === "") {
@@ -587,186 +592,49 @@ return `
 private generateMockSrc(impl_strings: string) {
 	const header_type_name = "Mock";
 	const header_type_name_lower = header_type_name.toLowerCase();
+	const template_file_path = path.join(this.template_path, 'mock_src_template.cc');
+	console.log(`Using mock src template path: ${template_file_path}`);
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		return;
+	}
 
-/* SOURCE TEMPLATE ---> */
-return `/*===========================================================================*
- * ${this.name} ${header_type_name_lower} generated with:
- *
-${this.ascii_art}
- */
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * COPYRIGHT:
-${this.copyright}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- **/
-
-/*===========================================================================*
- * Include headers
- *===========================================================================*/
-#include <cassert>
-#include "${this.name}_mock.h"
-
-/*===========================================================================*
- * Define macros
- *===========================================================================*/
-#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
-	"No mock instance found when calling mocked function. " \\
-	"Instantiate mock first!"
-
-#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
-	"Mock instance already exists!"
-
-/*===========================================================================*
- * Function-like macros
- *===========================================================================*/
-#define ${this.caps_mock_name}_ASSERT(exp, msg) \\
-	assert((static_cast<void>("${this.mock_name}: " msg), exp))
-
-#define ${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \\
-	${this.caps_mock_name}_ASSERT( \\
-		(nullptr != ${this.mock_instance_name}), \\
-		${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
-	)
-
-#define ${this.caps_mock_name}_ASSERT_NO_INSTANCE() \\
-	${this.caps_mock_name}_ASSERT( \\
-		(nullptr == ${this.mock_instance_name}), \\
-		${this.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
-	)
-
-/*===========================================================================*
- * Object definitions
- *===========================================================================*/
-static ${this.mock_name} * ${this.mock_instance_name} = nullptr;
-
-/*===========================================================================*
- * Constructor and Destructor
- *===========================================================================*/
-${this.mock_name}::${this.mock_name}()
-{
-	${this.caps_mock_name}_ASSERT_NO_INSTANCE();
-	${this.mock_instance_name} = this;
+	var instance = this;
+	var interpolator = new Interpolator({
+		impl_strings: impl_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
 }
-
-${this.mock_name}::~${this.mock_name}()
-{
-	${this.mock_instance_name} = nullptr;
-}
-
-/*===========================================================================*
- * Mocked function implementations
- *===========================================================================*/
-${impl_strings}
-/*===========================================================================*/
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- *
- * The Mockaccino extension can be found at:
- * MARKETPLACE:
- * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
- *
- * GITHUB:
- * https://github.com/Veenkar/mockaccino
- *
- *===========================================================================*/
-`;
-/* <--- END SOURCE TEMPLATE */
-    }
 
 private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
 	const header_type_name_lower = header_type_name.toLowerCase();
 
-/* SOURCE TEMPLATE ---> */
-		return `#ifndef ${this.caps_mock_name}_H
-#define ${this.caps_mock_name}_H
-/*===========================================================================*
- * ${this.name} ${header_type_name_lower} generated with:
- *
-${this.ascii_art}
- */
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * COPYRIGHT:
-${this.copyright}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- **/
-/*===========================================================================*
- * Include headers
- *===========================================================================*/
-#include <gmock/gmock.h>
-extern "C" {
-	#include "${this.header_name}"
+	const template_file_path = path.join(this.template_path, 'mock_header_template.h');
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		return;
+	}
+
+	var instance = this;
+	var interpolator = new Interpolator({
+		mock_strings: mock_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
 }
-
-/*===========================================================================*
- * ${header_type_name} class declaration
- *===========================================================================*/
-class ${this.mock_name} {
-public:
-	${this.mock_name}();
-	virtual ~${this.mock_name}();
-${mock_strings}
-};
-
-/*===========================================================================*/
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- *
- * The Mockaccino extension can be found at:
- * MARKETPLACE:
- * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
- *
- * GITHUB:
- * https://github.com/Veenkar/mockaccino
- *
- *===========================================================================*/
-#endif /* ${this.caps_mock_name}_H */
-`;
-/* <--- END SOURCE TEMPLATE */
-
-
-    }
 
 /* SOURCE TEMPLATE ---> */
 	private ascii_art =
@@ -790,82 +658,28 @@ ${mock_strings}
 private generateStubSrc(stub_strings: string) {
 	const header_type_name = "Stub";
 	const header_type_name_lower = header_type_name.toLowerCase();
+	console.log(`Using stub src template path: ${this.template_path}`);
 
-/* SOURCE TEMPLATE ---> */
-return `/*===========================================================================*
- * ${this.name} ${header_type_name_lower} generated with:
- *
-${this.ascii_art}
- */
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * COPYRIGHT:
-${this.copyright}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- **/
+	const template_file_path = path.join(this.template_path, 'stub_src_template.cc');
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		throw err;
+	}
 
-/*===========================================================================*
- * C++ Include headers
- *===========================================================================*/
-#include <iostream>
-
-/*===========================================================================*
- * C Include headers
- *===========================================================================*/
-extern "C" {
-    #include "${this.name}.h"
+	var instance = this;
+	var interpolator = new Interpolator({
+		stub_strings: stub_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
 }
-/*===========================================================================*
- * Function-like macros
- *===========================================================================*/
-#define ${this.caps_stub_name}_PRINT_INFO() \\
-( \\
-	std::cout << __FUNCTION__ << "() stub called. " \\
-	"Stub location: " << __FILE__ << ":" << __LINE__ << std::endl \\
-)
 
-/*===========================================================================*
- * Stubbed function implementations
- *===========================================================================*/
-extern "C" {
-
-${stub_strings}
-} /* extern "C" */
-/*===========================================================================*/
-/**
- * DESCRIPTION:
- * ${header_type_name} code for ${this.name}.
- *
- * GENERATOR: Mockaccino
- * VERSION: v${this.version}
- * INPUT: ${this.filename}
- * TIME: ${this.localTime}
- *
- * WARNING:
- * THIS IS AN AUTOMATICALLY GENERATED FILE.
- * Editing it manually might result in loss of changes.
- *
- * The Mockaccino extension can be found at:
- * MARKETPLACE:
- * https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
- *
- * GITHUB:
- * https://github.com/Veenkar/mockaccino
- *
- *===========================================================================*/
-`;
-/* <--- END SOURCE TEMPLATE */
-    }
 }
 
 

@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 // var parser = require("node-c-parser");
 var Mockaccino = require("./mockaccino.ts");
@@ -37,7 +38,9 @@ export function activate(context: vscode.ExtensionContext) {
 				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
 			}
 
-			let mockaccino = new Mockaccino(content, uri, config, version, wf);
+			const template_path = context.asAbsolutePath(path.join('templates'));
+
+			let mockaccino = new Mockaccino(content, uri, config, version, wf, template_path);
 			const result = mockaccino.mock();
 			if (result.result === 0) {
 				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
@@ -76,7 +79,9 @@ export function activate(context: vscode.ExtensionContext) {
 				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
 			}
 
-			let mockaccino = new Mockaccino(content, uri, config, version, wf);
+			const template_path = context.asAbsolutePath(path.join('templates'));
+
+			let mockaccino = new Mockaccino(content, uri, config, version, wf, template_path);
 			const result = mockaccino.stub();
 			if (result.result === 0) {
 				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
