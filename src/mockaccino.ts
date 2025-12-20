@@ -14,9 +14,6 @@ interface GenerationResult {
 }
 
 
-
-
-
 class Mockaccino {
 	private config: any;
 	private content_raw: string;
@@ -39,14 +36,12 @@ class Mockaccino {
 	private version: string;
 	private output_path: string = "";
 	private workspace_folder: string = "";
-	private skip_static_functions: boolean;
-	private skip_extern_functions: boolean;
-	private skip_functions_with_implicit_return_type: boolean;
 	private ignored_function_names: string[] = [];
 	private localTime: string;
 	public file_written: string = "";
 	private template_path: string;
-	private regexParser: RegexParser;
+	private ParserConfig: ParserConfig;
+	private regexParser: typeof RegexParser;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
@@ -132,14 +127,14 @@ class Mockaccino {
 			}
 		}
 
-		let RegexParserConfig = {
+		this.ParserConfig = {
 			skip_functions_with_implicit_return_type: this.config.get('skipFunctionsWithImplicitReturnType'),
 			skip_static_functions: this.config.get('skipStaticFunctions'),
 			skip_extern_functions: this.config.get('skipExternFunctions'),
 			ignored_function_names: this.ignored_function_names,
 		};
 
-		this.regexParser = new RegexParser(RegexParserConfig, this.c_functions_strings);
+		this.regexParser = new RegexParser(this.ParserConfig, this.c_functions_strings);
 
 		console.log(`Output path: ${this.output_path}`);
 	}

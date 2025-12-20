@@ -1,9 +1,9 @@
 
 class RegexParser
 {
-	private config : RegexParserConfig;
+	private config : ParserConfig;
 
-	constructor(config: RegexParserConfig, private c_functions_strings: string[])
+	constructor(config: ParserConfig, private c_functions_strings: string[])
 	{
 		this.config = config;
 	}

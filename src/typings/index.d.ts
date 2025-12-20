@@ -7,7 +7,7 @@ interface FunctionInfo {
 	is_extern: boolean;
 }
 
-interface RegexParserConfig {
+interface ParserConfig {
 	skip_functions_with_implicit_return_type: boolean;
 	skip_static_functions: boolean;
 	skip_extern_functions: boolean;
