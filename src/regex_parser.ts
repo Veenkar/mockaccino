@@ -1,6 +1,67 @@
 
 class RegexParser
 {
+	private config : RegexParserConfig;
+
+	constructor(config: RegexParserConfig, private c_functions_strings: string[])
+	{
+		this.config = config;
+	}
+
+	public getFunctionStrings(
+		stringifyFunction: (fn: FunctionInfo) => string = RegexParserToolbox.defaultStringifyFunction,
+		processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments
+	): string[] {
+		let mappedFunctionsStrings: string[] = [];
+		let mappedFunctions: FunctionInfo[] = [];
+
+ 		/* REGEX method */
+		const functionDeclarations = this.c_functions_strings;
+		mappedFunctions = functionDeclarations.map((fn: string) => ({
+			...RegexParserToolbox.parseFunctionDeclaration(fn, this.config.skip_functions_with_implicit_return_type)
+		}));
+
+		mappedFunctions = mappedFunctions.map(fn => ({
+			returnType: fn.returnType,
+			name: fn.name,
+			arguments: processArgumentsFunction(fn.arguments),
+			is_static: fn.is_static,
+			is_extern: fn.is_extern,
+		}));
+
+		if (this.config.skip_static_functions) {
+			mappedFunctions = mappedFunctions.filter(fn => !fn.is_static);
+		}
+
+		if (this.config.skip_extern_functions) {
+			mappedFunctions = mappedFunctions.filter(fn => !fn.is_extern);
+		}
+
+		if (this.config.ignored_function_names && this.config.ignored_function_names.length > 0) {
+			mappedFunctions = mappedFunctions.filter(fn => !this.config.ignored_function_names.includes(fn.name));
+		}
+
+		const seenNames = new Set<string>();
+		mappedFunctions = mappedFunctions.filter(fn => {
+			if (seenNames.has(fn.name)) {
+				return false;
+			}
+			seenNames.add(fn.name);
+			return true;
+		});
+
+		mappedFunctions = mappedFunctions.filter(fn => fn.name && fn.name.trim().length > 0);
+
+		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
+		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
+		return mappedFunctionsStrings;
+	}
+
+
+}
+
+class RegexParserToolbox
+{
 	public constructor() {}
 	/**
 	 * Parses a C function declaration string and returns a FunctionInfo object.
@@ -102,7 +163,7 @@ class RegexParser
 		if (!args || args === 'void') {
 			args = '';
 		}
-		return RegexParser.fixNoNameArguments(args);
+		return RegexParserToolbox.fixNoNameArguments(args);
 	}
 
 	/**
@@ -120,7 +181,7 @@ class RegexParser
 	 */
 	static removeArgumentName_ProcessArguments(args: string): string {
 		// Handle empty arguments or 'void'
-		args = RegexParser.defaultProcessArguments(args);
+		args = RegexParserToolbox.defaultProcessArguments(args);
 		return args.split(',')
 			.map(arg => {
 				arg = arg.trim();
@@ -147,7 +208,7 @@ class RegexParser
 
 	static extractArgumentName_ProcessArguments(args: string): string {
 		// Handle empty arguments or 'void'
-		args = RegexParser.defaultProcessArguments(args);
+		args = RegexParserToolbox.defaultProcessArguments(args);
 		return args.split(',')
 			.map(arg => {
 				arg = arg.trim();
@@ -174,7 +235,7 @@ class RegexParser
 			const mods = arg?.modifier?.filter((node: any) => node !== "static" && node.type !== "extern");
 			const modifiers = mods?.length ? arg.modifier.join(' ') + ' ' : '';
 			if (arg?.type === "PointerType") {
-				const targetStr = RegexParser.parseArgs(arg.target, includeName);
+				const targetStr = RegexParserToolbox.parseArgs(arg.target, includeName);
 				return `${modifiers}*${targetStr}`;
 			}
 			if (arg?.type === "Type") {
@@ -182,7 +243,7 @@ class RegexParser
 			}
 			if (arg?.type === "Definition") {
 				if (arg.defType){
-					const typeStr = RegexParser.parseArgs(arg.defType, includeName);
+					const typeStr = RegexParserToolbox.parseArgs(arg.defType, includeName);
 					return includeName && arg.name ? `${typeStr} ${arg.name}` : typeStr;
 				}
 			}
@@ -194,5 +255,5 @@ class RegexParser
 
 if(typeof module === "object")
 {
-    module.exports = RegexParser;
+    module.exports = {"RegexParserToolbox": RegexParserToolbox, "RegexParser": RegexParser};
 }

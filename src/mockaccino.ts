@@ -1,6 +1,8 @@
 var Preprocessor = require("./preprocessor.ts");
 var Interpolator = require("./interpolator.ts");
-var RegexParser = require("./regex_parser.ts");
+var RegexParserLib = require("./regex_parser.ts");
+var RegexParser = RegexParserLib.RegexParser;
+var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
 const fs = require('fs');
 const path = require('path');
 
@@ -44,6 +46,7 @@ class Mockaccino {
 	private localTime: string;
 	public file_written: string = "";
 	private template_path: string;
+	private regexParser: RegexParser;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
@@ -51,9 +54,6 @@ class Mockaccino {
 		this.uri = uri;
 		this.version = version;
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
-		this.skip_static_functions = this.config.get('skipStaticFunctions');
-		this.skip_extern_functions = this.config.get('skipExternFunctions');
-		this.skip_functions_with_implicit_return_type = this.config.get('skipFunctionsWithImplicitReturnType');
 		const ignored_function_names_string = this.config.get('ignoredFunctionNames');
 
 		if (typeof ignored_function_names_string === "string") {
@@ -132,6 +132,15 @@ class Mockaccino {
 			}
 		}
 
+		let RegexParserConfig = {
+			skip_functions_with_implicit_return_type: this.config.get('skipFunctionsWithImplicitReturnType'),
+			skip_static_functions: this.config.get('skipStaticFunctions'),
+			skip_extern_functions: this.config.get('skipExternFunctions'),
+			ignored_function_names: this.ignored_function_names,
+		};
+
+		this.regexParser = new RegexParser(RegexParserConfig, this.c_functions_strings);
+
 		console.log(`Output path: ${this.output_path}`);
 	}
 
@@ -153,12 +162,12 @@ class Mockaccino {
 		}
 
 		if ("file" === this.uri.scheme) {
-			const mock_strings_list = this.getFunctionStrings((fn: FunctionInfo) => 
-				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, RegexParser.removeArgumentName_ProcessArguments
+			const mock_strings_list = this.regexParser.getFunctionStrings((fn: FunctionInfo) => 
+				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, RegexParserToolbox.removeArgumentName_ProcessArguments
 			);
 			const mock_strings = mock_strings_list.join("\n");
 			const impl_strings = this.getMockImplStrings().join("\n");
-			// var decl_strings = this.getFunctionStrings(RegexParser.defaultStringifyFunction).join("\n");
+			// var decl_strings = this.regexParser.getFunctionStrings(RegexParserToolbox.defaultStringifyFunction).join("\n");
 			console.log("mock strings:");
 			console.log(mock_strings);
 			this.generateMockFiles(mock_strings, impl_strings);
@@ -278,74 +287,26 @@ class Mockaccino {
 
 
 
-	private getFunctionStrings(
-		stringifyFunction: (fn: FunctionInfo) => string = RegexParser.defaultStringifyFunction,
-		processArgumentsFunction: (args: string) => string = RegexParser.defaultProcessArguments
-	): string[] {
-		let mappedFunctionsStrings: string[] = [];
-		let mappedFunctions: FunctionInfo[] = [];
-
- 		/* REGEX method */
-		const functionDeclarations = this.c_functions_strings;
-		mappedFunctions = functionDeclarations.map((fn: string) => ({
-			...RegexParser.parseFunctionDeclaration(fn, this.skip_functions_with_implicit_return_type)
-		}));
-
-		mappedFunctions = mappedFunctions.map(fn => ({
-			returnType: fn.returnType,
-			name: fn.name,
-			arguments: processArgumentsFunction(fn.arguments),
-			is_static: fn.is_static,
-			is_extern: fn.is_extern,
-		}));
-
-		if (this.skip_static_functions) {
-			mappedFunctions = mappedFunctions.filter(fn => !fn.is_static);
-		}
-
-		if (this.skip_extern_functions) {
-			mappedFunctions = mappedFunctions.filter(fn => !fn.is_extern);
-		}
-
-		if (this.ignored_function_names && this.ignored_function_names.length > 0) {
-			mappedFunctions = mappedFunctions.filter(fn => !this.ignored_function_names.includes(fn.name));
-		}
-
-		const seenNames = new Set<string>();
-		mappedFunctions = mappedFunctions.filter(fn => {
-			if (seenNames.has(fn.name)) {
-				return false;
-			}
-			seenNames.add(fn.name);
-			return true;
-		});
-
-		mappedFunctions = mappedFunctions.filter(fn => fn.name && fn.name.trim().length > 0);
-
-		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
-		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
-		return mappedFunctionsStrings;
-	}
 
 
 
 /* === GENERATOR ZONE === */
 /* TODO: refactor to another class or mixin */
-	private getMockImplStrings(processArgumentsFunction: (args: string) => string = RegexParser.defaultProcessArguments): string[] {
-		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+	private getMockImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments): string[] {
+		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
 			`${fn.returnType} ${fn.name}(${fn.arguments})`,
 			/* <--- SOURCE TEMPLATE */
 		processArgumentsFunction);
 
 /* SOURCE TEMPLATE ---> */
-		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
 `
 {
 	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
 	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
 }
-`, RegexParser.extractArgumentName_ProcessArguments);
+`, RegexParserToolbox.extractArgumentName_ProcessArguments);
 /* <--- END SOURCE TEMPLATE */
 
 		// Zip mock_decl_strs with mock_call_strs
@@ -357,14 +318,14 @@ class Mockaccino {
 
 	}
 
-	private getStubImplStrings(processArgumentsFunction: (args: string) => string = RegexParser.removeArgumentName_ProcessArguments): string[] {
-		const mock_decl_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+	private getStubImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.removeArgumentName_ProcessArguments): string[] {
+		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
 			/* <--- SOURCE TEMPLATE */
 			`${fn.returnType} ${fn.name}(${fn.arguments})`,
 			/* <--- SOURCE TEMPLATE */
 		processArgumentsFunction);
 
-		const mock_call_strs = this.getFunctionStrings((fn: FunctionInfo) =>
+		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
 			{
 				var return_type = fn.returnType;
 				/* handle implicit return type */
