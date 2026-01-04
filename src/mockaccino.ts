@@ -285,6 +285,81 @@ class Mockaccino {
 
 
 
+
+private generateMockSrc(impl_strings: string) {
+	const header_type_name = "Mock";
+	const header_type_name_lower = header_type_name.toLowerCase();
+	const template_file_path = path.join(this.template_path, 'mock_src_template.cc');
+	console.log(`Using mock src template path: ${template_file_path}`);
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		return;
+	}
+
+	var instance = this;
+	var interpolator = new Interpolator({
+		impl_strings: impl_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
+}
+
+private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
+	const header_type_name_lower = header_type_name.toLowerCase();
+
+	const template_file_path = path.join(this.template_path, 'mock_header_template.h');
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		return;
+	}
+
+	var instance = this;
+	var interpolator = new Interpolator({
+		mock_strings: mock_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
+}
+
+
+private generateStubSrc(stub_strings: string) {
+	const header_type_name = "Stub";
+	const header_type_name_lower = header_type_name.toLowerCase();
+	console.log(`Using stub src template path: ${this.template_path}`);
+
+	const template_file_path = path.join(this.template_path, 'stub_src_template.cc');
+	let template_file_contents: string = "";
+	try {
+		template_file_contents = fs.readFileSync(template_file_path, "utf8");
+	} catch (err) {
+		console.warn(`Could not read template file '${template_file_path}': ${err}`);
+		template_file_contents = "";
+		throw err;
+	}
+
+	var instance = this;
+	var interpolator = new Interpolator({
+		stub_strings: stub_strings,
+		header_type_name: header_type_name,
+		header_type_name_lower: header_type_name_lower,
+		instance: instance
+	});
+	return interpolator.interpolate(template_file_contents);
+}
+
+
 /* === GENERATOR ZONE === */
 /* TODO: refactor to another class or mixin */
 	private getMockImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments): string[] {
@@ -360,97 +435,6 @@ return `
 		return zipped;
 
 	}
-
-private generateMockSrc(impl_strings: string) {
-	const header_type_name = "Mock";
-	const header_type_name_lower = header_type_name.toLowerCase();
-	const template_file_path = path.join(this.template_path, 'mock_src_template.cc');
-	console.log(`Using mock src template path: ${template_file_path}`);
-	let template_file_contents: string = "";
-	try {
-		template_file_contents = fs.readFileSync(template_file_path, "utf8");
-	} catch (err) {
-		console.warn(`Could not read template file '${template_file_path}': ${err}`);
-		template_file_contents = "";
-		return;
-	}
-
-	var instance = this;
-	var interpolator = new Interpolator({
-		impl_strings: impl_strings,
-		header_type_name: header_type_name,
-		header_type_name_lower: header_type_name_lower,
-		instance: instance
-	});
-	return interpolator.interpolate(template_file_contents);
-}
-
-private generateMockHeader(mock_strings: string, header_type_name: string = "Mock") {
-	const header_type_name_lower = header_type_name.toLowerCase();
-
-	const template_file_path = path.join(this.template_path, 'mock_header_template.h');
-	let template_file_contents: string = "";
-	try {
-		template_file_contents = fs.readFileSync(template_file_path, "utf8");
-	} catch (err) {
-		console.warn(`Could not read template file '${template_file_path}': ${err}`);
-		template_file_contents = "";
-		return;
-	}
-
-	var instance = this;
-	var interpolator = new Interpolator({
-		mock_strings: mock_strings,
-		header_type_name: header_type_name,
-		header_type_name_lower: header_type_name_lower,
-		instance: instance
-	});
-	return interpolator.interpolate(template_file_contents);
-}
-
-/* SOURCE TEMPLATE ---> */
-	private ascii_art =
-` *  _____ ______   ________  ________  ___  __    ________
- * |\\   _ \\  _   \\|\\   __  \\|\\   ____\\|\\  \\|\\  \\ |\\   __  \\
- * \\ \\  \\\\\\__\\ \\  \\ \\  \\|\\  \\ \\  \\___|\\ \\  \\/  /|\\ \\  \\|\\  \\
- *  \\ \\  \\\\|__| \\  \\ \\  \\\\\\  \\ \\  \\    \\ \\   ___  \\ \\   __  \\
- *   \\ \\  \\    \\ \\  \\ \\  \\\\\\  \\ \\  \\____\\ \\  \\\\ \\  \\ \\  \\ \\  \\
- *    \\ \\__\\    \\ \\__\\ \\_______\\ \\_______\\ \\__\\\\ \\__\\ \\__\\ \\__\\
- *     \\|__|     \\|__|\\|_______|\\|_______|\\|__| \\|__|\\|__|\\|__|
- *                        ________  ________  ___  ________   ________
- *                       |\\   ____\\|\\   ____\\|\\  \\|\\   ___  \\|\\   __  \\
- *                       \\ \\  \\___|\\ \\  \\___|\\ \\  \\ \\  \\\\ \\  \\ \\  \\|\\  \\
- *                        \\ \\  \\    \\ \\  \\    \\ \\  \\ \\  \\\\ \\  \\ \\  \\\\\\  \\
- *                         \\ \\  \\____\\ \\  \\____\\ \\  \\ \\  \\\\ \\  \\ \\  \\\\\\  \\
- *                          \\ \\_______\\ \\_______\\ \\__\\ \\__\\\\ \\__\\ \\_______\\
- *                           \\|_______|\\|_______|\\|__|\\|__| \\|__|\\|_______|
- *                              by SelerLabs`;
-/* <--- END SOURCE TEMPLATE */
-
-private generateStubSrc(stub_strings: string) {
-	const header_type_name = "Stub";
-	const header_type_name_lower = header_type_name.toLowerCase();
-	console.log(`Using stub src template path: ${this.template_path}`);
-
-	const template_file_path = path.join(this.template_path, 'stub_src_template.cc');
-	let template_file_contents: string = "";
-	try {
-		template_file_contents = fs.readFileSync(template_file_path, "utf8");
-	} catch (err) {
-		console.warn(`Could not read template file '${template_file_path}': ${err}`);
-		template_file_contents = "";
-		throw err;
-	}
-
-	var instance = this;
-	var interpolator = new Interpolator({
-		stub_strings: stub_strings,
-		header_type_name: header_type_name,
-		header_type_name_lower: header_type_name_lower,
-		instance: instance
-	});
-	return interpolator.interpolate(template_file_contents);
-}
 
 }
 

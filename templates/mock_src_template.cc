@@ -1,7 +1,21 @@
 /*===========================================================================*
  * ${instance.name} ${header_type_name_lower} generated with:
  *
-${instance.ascii_art}
+ *  _____ ______   ________  ________  ___  __    ________
+ * |\   _ \  _   \|\   __  \|\   ____\|\  \|\  \ |\   __  \
+ * \ \  \\\__\ \  \ \  \|\  \ \  \___|\ \  \/  /|\ \  \|\  \
+ *  \ \  \\|__| \  \ \  \\\  \ \  \    \ \   ___  \ \   __  \
+ *   \ \  \    \ \  \ \  \\\  \ \  \____\ \  \\ \  \ \  \ \  \
+ *    \ \__\    \ \__\ \_______\ \_______\ \__\\ \__\ \__\ \__\
+ *     \|__|     \|__|\|_______|\|_______|\|__| \|__|\|__|\|__|
+ *                        ________  ________  ___  ________   ________
+ *                       |\   ____\|\   ____\|\  \|\   ___  \|\   __  \
+ *                       \ \  \___|\ \  \___|\ \  \ \  \\ \  \ \  \|\  \
+ *                        \ \  \    \ \  \    \ \  \ \  \\ \  \ \  \\\  \
+ *                         \ \  \____\ \  \____\ \  \ \  \\ \  \ \  \\\  \
+ *                          \ \_______\ \_______\ \__\ \__\\ \__\ \_______\
+ *                           \|_______|\|_______|\|__|\|__| \|__|\|_______|
+ *                              by SelerLabs
  */
 /**
  * DESCRIPTION:
@@ -29,29 +43,29 @@ ${instance.copyright}
 /*===========================================================================*
  * Define macros
  *===========================================================================*/
-#define ${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
-	"No mock instance found when calling mocked function. " \\
+#define ${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \
+	"No mock instance found when calling mocked function. " \
 	"Instantiate mock first!"
 
-#define ${instance.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
+#define ${instance.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \
 	"Mock instance already exists!"
 
 /*===========================================================================*
  * Function-like macros
  *===========================================================================*/
-#define ${instance.caps_mock_name}_ASSERT(exp, msg) \\
+#define ${instance.caps_mock_name}_ASSERT(exp, msg) \
 	assert((static_cast<void>("${instance.mock_name}: " msg), exp))
 
-#define ${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \\
-	${instance.caps_mock_name}_ASSERT( \\
-		(nullptr != ${instance.mock_instance_name}), \\
-		${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \\
+#define ${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS() \
+	${instance.caps_mock_name}_ASSERT( \
+		(nullptr != ${instance.mock_instance_name}), \
+		${instance.caps_mock_name}_ASSERT_INSTANCE_EXISTS_WARN \
 	)
 
-#define ${instance.caps_mock_name}_ASSERT_NO_INSTANCE() \\
-	${instance.caps_mock_name}_ASSERT( \\
-		(nullptr == ${instance.mock_instance_name}), \\
-		${instance.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \\
+#define ${instance.caps_mock_name}_ASSERT_NO_INSTANCE() \
+	${instance.caps_mock_name}_ASSERT( \
+		(nullptr == ${instance.mock_instance_name}), \
+		${instance.caps_mock_name}_ASSERT_NO_INSTANCE_WARN \
 	)
 
 /*===========================================================================*

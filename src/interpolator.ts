@@ -8,6 +8,7 @@ class Interpolator {
     }
 
     interpolate(template: string): string {
+        template = template.replace(/\\/g, '\\\\');
         return new Function(...this.names, `return \`${template}\`;`)(...this.values);
     }
 }
