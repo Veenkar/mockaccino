@@ -14,10 +14,15 @@ npm run lint           # ESLint only
 npm run check-types    # tsc --noEmit only
 npm run package        # production build (minified)
 npm run compile-tests  # compile tests to out/
-npm run test           # run tests (launches VS Code test runner)
+npm run test           # run ALL tests inside Electron VS Code (@vscode/test-cli)
+npm run test:unit      # fast: compile + run pure-module unit tests via plain mocha (no Electron)
 ```
 
-Tests run inside a VS Code instance via `@vscode/test-cli` — `npm test` launches a headless Electron VS Code. There is no plain Node test runner.
+Two test paths:
+- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js`. Covers the pure logic modules (`preprocessor`, `regex_parser`, `interpolator`) without downloading/launching VS Code. Use this for the fast refactor loop.
+- **`npm run test`** — launches a headless Electron VS Code; required only for tests that import the `vscode` API (currently just `extension.test.ts`).
+
+Unit tests live in `src/test/*.test.ts` and `require()` the **compiled** sibling module (e.g. `require('../preprocessor')` → `out/preprocessor.js`), not the `.ts` source. They use mocha's TDD interface (`suite`/`test`) to match the harness. Note `mockaccino.ts` and `extension.ts` cannot be unit-tested this way: they use `require("./x.ts")` (literal `.ts`) which only resolves under esbuild bundling, plus `vscode`/`fs` deps.
 
 To publish a new `.vsix`: `npx vsce package` (requires `vsce` globally or via npx).
 
