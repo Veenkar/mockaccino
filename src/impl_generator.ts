@@ -15,20 +15,15 @@ class ImplGenerator {
 	) {}
 
 	getMockImplStrings(): string[] {
-		return this.regexParser.getFunctions().map((fn: FunctionInfo) => {
-			// signature keeps types + names; the forwarded call keeps names only.
-			const signatureArgs = RegexParserToolbox.defaultProcessArguments(fn.arguments);
-			const callArgs = RegexParserToolbox.extractArgumentName_ProcessArguments(fn.arguments);
-			return this.stringifier.mockImpl(fn.returnType, fn.name, signatureArgs, callArgs);
-		});
+		return this.regexParser.getFunctions().map((fn: FunctionInfo) =>
+			this.stringifier.mockImpl(fn.returnType, fn.name, RegexParserToolbox.projectArgs(fn.arguments))
+		);
 	}
 
 	getStubImplStrings(): string[] {
-		return this.regexParser.getFunctions().map((fn: FunctionInfo) => {
-			// the stub ignores its arguments, so the signature is types only.
-			const signatureArgs = RegexParserToolbox.removeArgumentName_ProcessArguments(fn.arguments);
-			return this.stringifier.stubImpl(fn.returnType, fn.name, signatureArgs);
-		});
+		return this.regexParser.getFunctions().map((fn: FunctionInfo) =>
+			this.stringifier.stubImpl(fn.returnType, fn.name, RegexParserToolbox.projectArgs(fn.arguments))
+		);
 	}
 }
 

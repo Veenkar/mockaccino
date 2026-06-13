@@ -133,6 +133,16 @@ class RegexParserToolbox
 		return `${fn.returnType} ${fn.name}(${fn.arguments});`;
 	}
 
+	/* Bundle the three argument projections FunctionStringifier needs from one
+	   raw argument string, each via the dedicated processor below. */
+	static projectArgs(args: string): ProjectedArgs {
+		return {
+			types: RegexParserToolbox.removeArgumentName_ProcessArguments(args),
+			signature: RegexParserToolbox.defaultProcessArguments(args),
+			names: RegexParserToolbox.extractArgumentName_ProcessArguments(args),
+		};
+	}
+
 
 
 	/**

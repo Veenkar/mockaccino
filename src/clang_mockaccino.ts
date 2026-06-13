@@ -45,19 +45,19 @@ class ClangMockaccino extends Mockaccino {
 
 	protected getMockMethodStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, this.typesOnly(c_func_info))
+			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
 		);
 	}
 
 	protected getMockImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, this.signature(c_func_info), this.callArgs(c_func_info))
+			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
 		);
 	}
 
 	protected getStubImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, this.typesOnly(c_func_info))
+			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
 		);
 	}
 
@@ -86,22 +86,24 @@ class ClangMockaccino extends Mockaccino {
 		return fns;
 	}
 
-	/* Argument projections from the structured params. Unnamed params get a
-	   synthesised name so the forwarding call and signature stay valid C. */
-	private typesOnly(fn: any): string {
-		const parts = fn.params.map((p: any) => p.type);
-		if (fn.is_variadic) { parts.push("..."); }
-		return parts.join(", ");
-	}
-
-	private signature(fn: any): string {
-		const parts = fn.params.map((p: any, i: number) => `${p.type} ${p.name || `arg${i + 1}`}`);
-		if (fn.is_variadic) { parts.push("..."); }
-		return parts.join(", ");
-	}
-
-	private callArgs(fn: any): string {
-		return fn.params.map((p: any, i: number) => p.name || `arg${i + 1}`).join(", ");
+	/* The three argument projections, derived from the structured params. Unnamed
+	   params get a synthesised name so the signature and forwarding call stay
+	   valid C. A trailing `...` is added to the types/signature for variadics, but
+	   not to the names (a `...` can't be forwarded by name). */
+	private projectArgs(fn: any): ProjectedArgs {
+		const synth = (p: any, i: number) => p.name || `arg${i + 1}`;
+		const types = fn.params.map((p: any) => p.type);
+		const signature = fn.params.map((p: any, i: number) => `${p.type} ${synth(p, i)}`);
+		const names = fn.params.map((p: any, i: number) => synth(p, i));
+		if (fn.is_variadic) {
+			types.push("...");
+			signature.push("...");
+		}
+		return {
+			types: types.join(", "),
+			signature: signature.join(", "),
+			names: names.join(", "),
+		};
 	}
 
 	/* -I for project includes, -isystem for system header paths, plus any verbatim
