@@ -81,3 +81,62 @@ suite('ClangParser.extractTargetFunctions', () => {
 		assert.ok(!fns.some((f: any) => f.name === 'printf'), 'printf is from stdio.h and must be excluded');
 	});
 });
+
+suite('ClangParser.extractTargetFunctions (signature shapes)', () => {
+	function one(node: any) {
+		return ClangParser.extractTargetFunctions({ inner: [node] })[0];
+	}
+
+	test('extern storage class is detected', () => {
+		const fn = one({ kind: 'FunctionDecl', name: 'e', storageClass: 'extern', type: { qualType: 'void (void)' }, inner: [] });
+		assert.strictEqual(fn.is_extern, true);
+		assert.strictEqual(fn.is_static, false);
+	});
+
+	test('unnamed parameters keep an empty name (caller synthesises one)', () => {
+		const fn = one({
+			kind: 'FunctionDecl', name: 'f', type: { qualType: 'void (int, char *)' },
+			inner: [
+				{ kind: 'ParmVarDecl', type: { qualType: 'int' } },
+				{ kind: 'ParmVarDecl', type: { qualType: 'char *' } },
+			],
+		});
+		assert.deepStrictEqual(fn.params, [
+			{ type: 'int', name: '' },
+			{ type: 'char *', name: '' },
+		]);
+	});
+
+	test('struct-by-value parameter keeps its type spelling', () => {
+		const fn = one({
+			kind: 'FunctionDecl', name: 'g', type: { qualType: 'void (Viewport)' },
+			inner: [{ kind: 'ParmVarDecl', name: 'vp', type: { qualType: 'Viewport' } }],
+		});
+		assert.deepStrictEqual(fn.params, [{ type: 'Viewport', name: 'vp' }]);
+	});
+
+	test('const-pointer return type is preserved', () => {
+		const fn = one({ kind: 'FunctionDecl', name: 'name', type: { qualType: 'const char *(void)' }, inner: [] });
+		assert.strictEqual(fn.returnType, 'const char *');
+		assert.deepStrictEqual(fn.params, []);
+	});
+
+	test('a definition (body present) is parsed, ignoring non-param inner nodes', () => {
+		// A FunctionDecl with a body has a CompoundStmt sibling to the ParmVarDecls.
+		const fn = one({
+			kind: 'FunctionDecl', name: 'def', type: { qualType: 'int (int)' },
+			inner: [
+				{ kind: 'ParmVarDecl', name: 'x', type: { qualType: 'int' } },
+				{ kind: 'CompoundStmt', inner: [] },
+			],
+		});
+		assert.strictEqual(fn.name, 'def');
+		assert.deepStrictEqual(fn.params, [{ type: 'int', name: 'x' }]);
+	});
+
+	test('a function with no prototype has no params', () => {
+		const fn = one({ kind: 'FunctionDecl', name: 'noproto', type: { qualType: 'int ()' }, inner: [] });
+		assert.strictEqual(fn.returnType, 'int');
+		assert.deepStrictEqual(fn.params, []);
+	});
+});
