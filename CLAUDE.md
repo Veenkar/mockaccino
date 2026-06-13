@@ -19,10 +19,10 @@ npm run test:unit      # fast: compile + run pure-module unit tests via plain mo
 ```
 
 Two test paths:
-- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js`. Covers the pure logic modules (`preprocessor`, `regex_parser`, `interpolator`) without downloading/launching VS Code. Use this for the fast refactor loop.
+- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js`. Covers `preprocessor`, `regex_parser`, `interpolator`, and `mockaccino` (the orchestrator, driven against the real templates with `config`/`uri` mocked and output sent to a temp dir) without downloading/launching VS Code. Use this for the fast refactor loop.
 - **`npm run test`** — launches a headless Electron VS Code; required only for tests that import the `vscode` API (currently just `extension.test.ts`).
 
-Unit tests live in `src/test/*.test.ts` and `require()` the **compiled** sibling module (e.g. `require('../preprocessor')` → `out/preprocessor.js`), not the `.ts` source. They use mocha's TDD interface (`suite`/`test`) to match the harness. Note `mockaccino.ts` and `extension.ts` cannot be unit-tested this way: they use `require("./x.ts")` (literal `.ts`) which only resolves under esbuild bundling, plus `vscode`/`fs` deps.
+Unit tests live in `src/test/*.test.ts` and `require()` the **compiled** sibling module (e.g. `require('../preprocessor')` → `out/preprocessor.js`), not the `.ts` source. They use mocha's TDD interface (`suite`/`test`) to match the harness. Only `extension.ts` can't be unit-tested this way — it imports the `vscode` API, which exists only inside the Electron host. (`mockaccino.ts` became testable once its internal requires were switched from the literal `require("./preprocessor.ts")` to extensionless `require("./preprocessor")`, which resolves under both esbuild and plain Node.)
 
 To publish a new `.vsix`: `npx vsce package` (requires `vsce` globally or via npx).
 
@@ -64,7 +64,7 @@ Active editor text
 
 ### Module system quirk
 
-All non-extension source files use `if(typeof module === "object") module.exports = ...` for CommonJS compatibility with test/Node environments, but are imported in `extension.ts` via `require("./mockaccino.ts")`. The esbuild config handles bundling these `.ts` files directly.
+All non-extension source files use `if(typeof module === "object") module.exports = ...` for CommonJS compatibility with test/Node environments, and are imported via extensionless `require("./mockaccino")`. esbuild resolves these to the `.ts` sources when bundling, and plain Node resolves them to the compiled `out/*.js` when testing. (Do **not** reintroduce a `.ts` extension in these requires — it works under esbuild but breaks `require()` of the compiled output, since `out/` only contains `.js`.)
 
 ### `ParserConfig` and `FunctionInfo` types
 

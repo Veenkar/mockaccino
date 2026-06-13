@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 // var parser = require("node-c-parser");
-var Mockaccino = require("./mockaccino.ts");
+var Mockaccino = require("./mockaccino");
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
