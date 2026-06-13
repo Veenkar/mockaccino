@@ -15,15 +15,20 @@ skips.
 node integration/run.js          (or: npm run test:integration)
 ```
 
-1. Compiles the extension (`tsc`) so the `RegexMockaccino` orchestrator is available.
-2. Runs RegexMockaccino on the dependency headers and writes both mocks and stubs to
-   `integration/generated/`:
-   - `display.h` → `display_mock.h` / `display_mock.cc` / `display_stub.cc`
-   - `rng.h`     → `rng_mock.h` / `rng_mock.cc` / `rng_stub.cc`
+1. Compiles the extension (`tsc`) so both backend orchestrators are available.
+2. Runs **both backends** on the dependency headers, writing mocks and stubs to a
+   dir per backend:
+   - `RegexMockaccino` → `integration/generated/`
+   - `ClangMockaccino` → `integration/generated_clang/`
+   - each emits, per header: `*_mock.h` / `*_mock.cc` / `*_stub.cc`
 3. Configures + builds the CMake project with **clang** (GoogleTest is pulled
-   via `FetchContent`, so the first run needs network access).
-4. Runs the gmock unit tests (`unit_tests`) and the stub tests (`stub_tests`)
-   via `ctest`.
+   via `FetchContent`, so the first run needs network access). The test targets
+   (`unit_tests` / `stub_tests` / `mock_assert_tests`) are built **once per
+   backend** from the same test sources.
+4. Runs the tests via `ctest` — names are prefixed `regex.*` and `clang.*`. Since
+   both backends are compiled against the identical test sources, they must
+   produce interchangeable mocks (same class names, `MOCK_METHOD` signatures, and
+   C-linkage symbols).
 5. Runs the real `game_of_life` binary for a few generations.
 
 If clang / cmake / ninja (or network for the GoogleTest download) is missing,

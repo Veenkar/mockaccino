@@ -7,16 +7,20 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(GEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated)
+set(GEN_CLANG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated_clang)
 
-# The mocks are produced by Mockaccino before CMake runs (see run.js). Fail
-# early with a clear message if generation was skipped.
-foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc display_stub.cc rng_stub.cc)
-    if(NOT EXISTS ${GEN_DIR}/${f})
-        message(FATAL_ERROR
-            "Generated mock '${f}' not found in ${GEN_DIR}.\n"
-            "Generate the mocks first:  node integration/run.js  (or npm run test:integration)")
-    endif()
+# The mocks are produced by Mockaccino (both backends) before CMake runs (see
+# run.js). Fail early with a clear message if generation was skipped.
+foreach(dir ${GEN_DIR} ${GEN_CLANG_DIR})
+    foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc display_stub.cc rng_stub.cc)
+        if(NOT EXISTS ${dir}/${f})
+            message(FATAL_ERROR
+                "Generated mock '${f}' not found in ${dir}.\n"
+                "Generate the mocks first:  node integration/run.js  (or npm run test:integration)")
+        endif()
+    endforeach()
 endforeach()
 
 # --- GoogleTest / gmock via FetchContent --------------------------------------
@@ -39,49 +43,57 @@ add_executable(game_of_life
 )
 target_include_directories(game_of_life PRIVATE ${SRC_DIR})
 
-# --- Unit tests (Mockaccino-generated mocks instead of display.c / rng.c) ------
+# --- Per-backend test targets -------------------------------------------------
+# The same test sources are built against EACH backend's generated mocks/stubs,
+# so both backends must produce interchangeable output (same class names, same
+# MOCK_METHOD signatures, same C-linkage symbols). ctest names are prefixed with
+# the backend, e.g. "regex.EngineRenderTest.*" and "clang.EngineRenderTest.*".
 enable_testing()
-add_executable(unit_tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_board.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_engine.cpp
-    ${SRC_DIR}/board.c
-    ${SRC_DIR}/engine.c
-    ${GEN_DIR}/display_mock.cc
-    ${GEN_DIR}/rng_mock.cc
-)
-target_include_directories(unit_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
-target_link_libraries(unit_tests PRIVATE gmock gmock_main)
-
-# --- Stub tests (generated *_stub.cc; no gmock) -------------------------------
-# Stubs replace the dependency, so they cannot be linked alongside the mocks for
-# the same module — hence a separate executable. These prove the stub output
-# compiles, links, and returns the documented safe defaults.
-add_executable(stub_tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_stub.cpp
-    ${GEN_DIR}/display_stub.cc
-    ${GEN_DIR}/rng_stub.cc
-)
-target_include_directories(stub_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
-target_link_libraries(stub_tests PRIVATE gtest_main)
-
-# --- Mock assertion (death) tests ---------------------------------------------
-# The generated mock guards against misuse with assert(): calling a mocked
-# function with no live instance, or constructing a second instance. assert() is
-# compiled out by NDEBUG (the suite builds Release), so this target re-enables
-# assertions (-UNDEBUG / MSVC /UNDEBUG) and uses gtest death tests to prove the
-# guards actually abort. It provides its own main() (CRT/dialog setup on Windows).
-add_executable(mock_assert_tests
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_mock_asserts.cpp
-    ${GEN_DIR}/display_mock.cc
-)
-target_include_directories(mock_assert_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
-target_link_libraries(mock_assert_tests PRIVATE gmock)
-target_compile_options(mock_assert_tests PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>
-)
-
 include(GoogleTest)
-gtest_discover_tests(unit_tests)
-gtest_discover_tests(stub_tests)
-gtest_discover_tests(mock_assert_tests)
+
+function(add_backend_tests backend gen_dir)
+    # Unit tests: generated mocks replace the real display.c / rng.c; interactions
+    # are verified via EXPECT_CALL.
+    add_executable(unit_tests_${backend}
+        ${TEST_DIR}/test_board.cpp
+        ${TEST_DIR}/test_engine.cpp
+        ${SRC_DIR}/board.c
+        ${SRC_DIR}/engine.c
+        ${gen_dir}/display_mock.cc
+        ${gen_dir}/rng_mock.cc
+    )
+    target_include_directories(unit_tests_${backend} PRIVATE ${SRC_DIR} ${gen_dir})
+    target_link_libraries(unit_tests_${backend} PRIVATE gmock gmock_main)
+
+    # Stub tests: generated *_stub.cc (no gmock). A separate binary because a stub
+    # and mock can't define the same symbol together. Prove the stub links,
+    # returns the safe defaults, and logs its trace line.
+    add_executable(stub_tests_${backend}
+        ${TEST_DIR}/test_stub.cpp
+        ${gen_dir}/display_stub.cc
+        ${gen_dir}/rng_stub.cc
+    )
+    target_include_directories(stub_tests_${backend} PRIVATE ${SRC_DIR} ${gen_dir})
+    target_link_libraries(stub_tests_${backend} PRIVATE gtest_main)
+
+    # Mock assertion (death) tests: the generated mock's assert() guards are
+    # NDEBUG-gated, so force assertions on (-UNDEBUG / MSVC /UNDEBUG) and use gtest
+    # death tests to prove they abort. test_mock_asserts.cpp provides its own main.
+    add_executable(mock_assert_tests_${backend}
+        ${TEST_DIR}/test_mock_asserts.cpp
+        ${gen_dir}/display_mock.cc
+    )
+    target_include_directories(mock_assert_tests_${backend} PRIVATE ${SRC_DIR} ${gen_dir})
+    target_link_libraries(mock_assert_tests_${backend} PRIVATE gmock)
+    target_compile_options(mock_assert_tests_${backend} PRIVATE
+        $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>
+    )
+
+    gtest_discover_tests(unit_tests_${backend} TEST_PREFIX "${backend}.")
+    gtest_discover_tests(stub_tests_${backend} TEST_PREFIX "${backend}.")
+    gtest_discover_tests(mock_assert_tests_${backend} TEST_PREFIX "${backend}.")
+endfunction()
+
+add_backend_tests(regex ${GEN_DIR})
+add_backend_tests(clang ${GEN_CLANG_DIR})

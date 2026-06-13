@@ -1,3 +1,4 @@
 # Build output and generated mocks are produced by run.js; not committed.
 build/
 generated/
+generated_clang/
