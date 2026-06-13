@@ -3,9 +3,52 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-// var parser = require("node-c-parser");
-// Regex-parser backend (the only wired backend; ClangMockaccino is a scaffold).
+// Parser backends. Regex is the original, dependency-free path; clang resolves
+// includes/types via a real compiler (see clang_mockaccino.ts).
 var RegexMockaccino = require("./regex_mockaccino");
+var ClangMockaccino = require("./clang_mockaccino");
+
+type Operation = 'mock' | 'stub';
+
+// Shared command body: read the active editor + config, construct the chosen
+// backend, run the operation, and report the result. Backend constructors may
+// throw (e.g. clang missing or a parse error), so generation is guarded.
+function runGeneration(context: vscode.ExtensionContext, BackendClass: any, operation: Operation) {
+	const config = vscode.workspace.getConfiguration('mockaccino');
+
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showWarningMessage('No active editor found.');
+		return;
+	}
+
+	const document = editor.document;
+	const uri = document.uri;
+	const content = document.getText();
+	const version = context.extension.packageJSON.version;
+	console.log(`Mockaccino version: ${version}`);
+
+	let wf = "";
+	if (vscode.workspace.workspaceFolders !== undefined) {
+		wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+
+	const template_path = context.asAbsolutePath(path.join('templates'));
+
+	try {
+		const mockaccino = new BackendClass(content, uri, config, version, wf, template_path);
+		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
+		if (result.result === 0) {
+			vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
+		} else if (result.result === 1) {
+			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
+		} else {
+			vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
+		}
+	} catch (err: any) {
+		vscode.window.showErrorMessage(`Mockaccino: ${err && err.message ? err.message : err}`);
+	}
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -15,90 +58,20 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Mockaccino actiaved!');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const mock_command = vscode.commands.registerCommand('mockaccino.mockCurrentFile', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		const config = vscode.workspace.getConfiguration('mockaccino');
+	// Each command in package.json maps to a (backend, operation) pair.
+	const commands: [string, any, Operation][] = [
+		['mockaccino.mockCurrentFile', RegexMockaccino, 'mock'],
+		['mockaccino.stubCurrentFile', RegexMockaccino, 'stub'],
+		['mockaccino.mockCurrentFileClang', ClangMockaccino, 'mock'],
+		['mockaccino.stubCurrentFileClang', ClangMockaccino, 'stub'],
+	];
 
-		const editor = vscode.window.activeTextEditor;
-		if (editor) {
-			const document = editor.document;
-			const uri = document.uri;
-			const content = document.getText();
-			// vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
-			// console.log(`Found content:\n${content}`);
-			const version = context.extension.packageJSON.version;
-			console.log(`Mockaccino version: ${version}`);
-
-
-			let wf = "";
-			if (vscode.workspace.workspaceFolders !== undefined) {
-				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			}
-
-			const template_path = context.asAbsolutePath(path.join('templates'));
-
-			let mockaccino = new RegexMockaccino(content, uri, config, version, wf, template_path);
-			const result = mockaccino.mock();
-			if (result.result === 0) {
-				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
-			} else if (result.result === 1) {
-				vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
-			} else {
-				vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
-			}
-
-		} else {
-			vscode.window.showWarningMessage('No active editor found.');
-		}
-	});
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const stub_command = vscode.commands.registerCommand('mockaccino.stubCurrentFile', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		const config = vscode.workspace.getConfiguration('mockaccino');
-
-		const editor = vscode.window.activeTextEditor;
-		if (editor) {
-			const document = editor.document;
-			const uri = document.uri;
-			const content = document.getText();
-			// vscode.window.showInformationMessage('Active file content read. Length: ' + content.length);
-			// console.log(`Found content:\n${content}`);
-			const version = context.extension.packageJSON.version;
-			console.log(`Mockaccino version: ${version}`);
-
-
-			let wf = "";
-			if (vscode.workspace.workspaceFolders !== undefined) {
-				wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			}
-
-			const template_path = context.asAbsolutePath(path.join('templates'));
-
-			let mockaccino = new RegexMockaccino(content, uri, config, version, wf, template_path);
-			const result = mockaccino.stub();
-			if (result.result === 0) {
-				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
-			} else if (result.result === 1) {
-				vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
-			} else {
-				vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
-			}
-
-		} else {
-			vscode.window.showWarningMessage('No active editor found.');
-		}
-	});
-
-	context.subscriptions.push(mock_command);
-	context.subscriptions.push(stub_command);
+	for (const [commandId, BackendClass, operation] of commands) {
+		const disposable = vscode.commands.registerCommand(commandId, () =>
+			runGeneration(context, BackendClass, operation)
+		);
+		context.subscriptions.push(disposable);
+	}
 }
 
 
