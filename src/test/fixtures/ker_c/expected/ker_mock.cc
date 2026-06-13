@@ -24,7 +24,7 @@
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:11:20
+ * TIME: 2026-06-13 19:26:15
  *
  * COPYRIGHT:
  * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
@@ -93,7 +93,7 @@ Ker_Mock::~Ker_Mock()
 /*===========================================================================*
  * Mocked function implementations
  *===========================================================================*/
-Module metadata MODULE_AUTHOR("Ruan de Bruyn")
+int MODULE_AUTHOR("Ruan de Bruyn")
 {
 	KER_MOCK_ASSERT_INSTANCE_EXISTS();
 	return ker_mock_->MODULE_AUTHOR("Ruan de Bruyn");
@@ -111,7 +111,7 @@ int MODULE_LICENSE("GPL")
 	return ker_mock_->MODULE_LICENSE("GPL");
 }
 
-Custom init and exit methods int custom_init()
+int custom_init()
 {
 	KER_MOCK_ASSERT_INSTANCE_EXISTS();
 	return ker_mock_->custom_init();
@@ -131,7 +131,7 @@ void custom_exit()
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:11:20
+ * TIME: 2026-06-13 19:26:15
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.

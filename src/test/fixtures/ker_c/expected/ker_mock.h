@@ -26,7 +26,7 @@
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:11:20
+ * TIME: 2026-06-13 19:26:15
  *
  * COPYRIGHT:
  * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
@@ -53,10 +53,10 @@ class Ker_Mock {
 public:
 	Ker_Mock();
 	virtual ~Ker_Mock();
-	MOCK_METHOD(Module metadata, MODULE_AUTHOR, ("Ruan de Bruyn"));
+	MOCK_METHOD(int, MODULE_AUTHOR, ("Ruan de Bruyn"));
 	MOCK_METHOD(int, MODULE_DESCRIPTION, ("Hello world driver"));
 	MOCK_METHOD(int, MODULE_LICENSE, ("GPL"));
-	MOCK_METHOD(Custom init and exit methods int, custom_init, ());
+	MOCK_METHOD(int, custom_init, ());
 	MOCK_METHOD(void, custom_exit, ());
 };
 
@@ -68,7 +68,7 @@ public:
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:11:20
+ * TIME: 2026-06-13 19:26:15
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.

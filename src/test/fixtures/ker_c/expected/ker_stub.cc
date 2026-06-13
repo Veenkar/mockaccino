@@ -24,7 +24,7 @@
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:13:23
+ * TIME: 2026-06-13 19:26:18
  *
  * COPYRIGHT:
  * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
@@ -62,10 +62,10 @@ extern "C" {
  *===========================================================================*/
 extern "C" {
 
-Module metadata MODULE_AUTHOR("Ruan de Bruyn")
+int MODULE_AUTHOR("Ruan de Bruyn")
 {
 	KER_STUB_PRINT_INFO();
-	return static_cast<Module metadata>(0);
+	return static_cast<int>(0);
 }
 
 int MODULE_DESCRIPTION("Hello world driver")
@@ -80,10 +80,10 @@ int MODULE_LICENSE("GPL")
 	return static_cast<int>(0);
 }
 
-Custom init and exit methods int custom_init()
+int custom_init()
 {
 	KER_STUB_PRINT_INFO();
-	return static_cast<Custom init and exit methods int>(0);
+	return static_cast<int>(0);
 }
 
 void custom_exit()
@@ -100,7 +100,7 @@ void custom_exit()
  * GENERATOR: Mockaccino
  * VERSION: v1.10.1
  * INPUT: ker.c
- * TIME: 2026-06-13 19:13:23
+ * TIME: 2026-06-13 19:26:18
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
