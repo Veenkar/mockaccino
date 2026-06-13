@@ -64,6 +64,24 @@ add_executable(stub_tests
 target_include_directories(stub_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
 target_link_libraries(stub_tests PRIVATE gtest_main)
 
+# --- Mock assertion (death) tests ---------------------------------------------
+# The generated mock guards against misuse with assert(): calling a mocked
+# function with no live instance, or constructing a second instance. assert() is
+# compiled out by NDEBUG (the suite builds Release), so this target re-enables
+# assertions (-UNDEBUG / MSVC /UNDEBUG) and uses gtest death tests to prove the
+# guards actually abort. It provides its own main() (CRT/dialog setup on Windows).
+add_executable(mock_assert_tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_mock_asserts.cpp
+    ${GEN_DIR}/display_mock.cc
+)
+target_include_directories(mock_assert_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
+target_link_libraries(mock_assert_tests PRIVATE gmock)
+target_compile_options(mock_assert_tests PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>
+)
+
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 gtest_discover_tests(stub_tests)
+gtest_discover_tests(mock_assert_tests)
