@@ -9,5 +9,14 @@
         "dist": true // set this to false to include "dist" folder in search results
     },
     // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
-    "typescript.tsc.autoDetect": "off"
+    "typescript.tsc.autoDetect": "off",
+    // CMake Tools: the real CMake project lives in integration/ (the extension
+    // itself is a TS project). Build into integration/build (gitignored, and the
+    // same dir integration/run.js uses) with Ninja, matching the suite. This
+    // surfaces the gmock/stub ctest tests in the Testing panel. Note: the test
+    // targets link Mockaccino-generated mocks, so run `npm run test:integration`
+    // once first to populate integration/generated, and pick a Clang kit.
+    "cmake.sourceDirectory": "${workspaceFolder}/integration",
+    "cmake.buildDirectory": "${workspaceFolder}/integration/build",
+    "cmake.generator": "Ninja"
 }
