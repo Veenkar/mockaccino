@@ -25,6 +25,13 @@ suite('RegexParserToolbox.parseFunctionDeclaration', () => {
 		assert.strictEqual(fn.arguments, '');
 	});
 
+	test('parses a pointer return with the star adjacent to the name', () => {
+		const fn = RegexParserToolbox.parseFunctionDeclaration('const char *backend_name(void)', false);
+		assert.strictEqual(fn.name, 'backend_name');
+		assert.strictEqual(fn.returnType, 'const char *');
+		assert.strictEqual(fn.arguments, '');
+	});
+
 	test('detects static specifier and strips it from return type', () => {
 		const fn = RegexParserToolbox.parseFunctionDeclaration('static int foo(void)', false);
 		assert.strictEqual(fn.is_static, true);

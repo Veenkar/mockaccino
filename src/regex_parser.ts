@@ -85,11 +85,16 @@ class RegexParserToolbox
 		// Remove function link modifiers (extern, static) from the start
 		const cleanedDecl = declaration.trim().replace(/^\s*(extern|static)\s+/i, '');
 
-		// Match optional return type (with modifiers), function name, and arguments
-		let regex = /^\s*([\w\s\*\&\[\]]*?\s+)?([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+		// Match optional return type (with modifiers), function name, and arguments.
+		// The return-type/name boundary may be whitespace OR a pointer/ref char, so
+		// that pointer returns written with the star adjacent to the name
+		// (e.g. "const char *foo(void)") parse correctly instead of being dropped.
+		let regex = /^\s*([\w\s\*\&\[\]]*?[\s*&])?([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
 		if (skip_functions_with_implicit_return_type) {
 			console.log("Skipping functions with implicit return type");
-			regex = /^\s*([\w\s\*\&\[\]]*?)\s+([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
+			// Return type is mandatory here (functions with an implicit return type
+			// must NOT match, so they get skipped).
+			regex = /^\s*([\w\s\*\&\[\]]*?[\s*&])([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*;?\s*$/;
 		}
 
 
