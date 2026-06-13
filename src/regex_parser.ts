@@ -189,15 +189,19 @@ class RegexParserToolbox
 				arg = arg.trim();
 				/**
 				 * Regex explanation:
-				 * ^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$
-				 * - (.*\S) : Capture group 1, any characters ending with a non-space (the type part)
-				 * - \s+    : At least one whitespace between type and name
+				 * ^(.*?[\s*])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$
+				 * - (.*?[\s*]) : Capture group 1, the type part, ending in either whitespace
+				 *                or a '*' so that pointer args written as "type *name"
+				 *                (star adjacent to the name) split correctly, not just
+				 *                "type *" / "type name".
+				 * - \s*    : Optional whitespace between type and name
 				 * - ([a-zA-Z_][a-zA-Z0-9_]*) : Capture group 2, C identifier (argument name)
+				 * - (\[\s*\])? : Capture group 3, optional array suffix
 				 * - $      : End of string
 				 */
-				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
+				const match = arg.match(/^(.*?[\s*])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
 				if (match) {
-					let res = match[1]; // Return only the type part
+					let res = match[1].trim(); // Return only the type part (may end with '*')
 					if (match[3]) { // If there is an array part, add it back
 						res += match[3];
 					}
@@ -216,15 +220,18 @@ class RegexParserToolbox
 				arg = arg.trim();
 				/**
 				 * Regex explanation:
-				 * ^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)$
-				 * - (.*\S) : Capture group 1, any characters ending with a non-space (the type part)
-				 * - \s+    : At least one whitespace between type and name
+				 * ^(.*?[\s*])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$
+				 * - (.*?[\s*]) : Capture group 1, the type part, ending in either whitespace
+				 *                or a '*' so that pointer args written as "type *name"
+				 *                (star adjacent to the name) split correctly.
+				 * - \s*    : Optional whitespace between type and name
 				 * - ([a-zA-Z_][a-zA-Z0-9_]*) : Capture group 2, C identifier (argument name)
+				 * - (\[\s*\])? : Capture group 3, optional array suffix
 				 * - $      : End of string
 				 */
-				const match = arg.match(/^(.*\S)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
+				const match = arg.match(/^(.*?[\s*])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(\[\s*\])?\s*$/);
 				if (match) {
-					let res = match[2]; // Return only the type part
+					let res = match[2]; // Return only the argument name
 					return res;
 				}
 				return arg; // If no match, return as is

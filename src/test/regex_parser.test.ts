@@ -73,6 +73,20 @@ suite('RegexParserToolbox argument processors', () => {
 			'str, count'
 		);
 	});
+
+	test('removeArgumentName_ProcessArguments handles a star adjacent to the name', () => {
+		assert.strictEqual(
+			RegexParserToolbox.removeArgumentName_ProcessArguments('const char *row, int y'),
+			'const char *, int'
+		);
+	});
+
+	test('extractArgumentName_ProcessArguments handles a star adjacent to the name', () => {
+		assert.strictEqual(
+			RegexParserToolbox.extractArgumentName_ProcessArguments('const char *row, int y'),
+			'row, y'
+		);
+	});
 });
 
 suite('RegexParser.getFunctionStrings', () => {
