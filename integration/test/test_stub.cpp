@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <string>
 
 extern "C" {
 #include "display.h"
@@ -38,4 +39,28 @@ TEST(DisplayStub, RunsVoidStubsAndReturnsZeroDefaults)
 
     EXPECT_EQ(display_width(), 0);               // static_cast<int>(0)
     EXPECT_EQ(display_backend_name(), nullptr);  // pointer return stub -> nullptr
+}
+
+// Each stub also logs a trace line via <STUB>_PRINT_INFO() (std::cout). That is
+// runtime behaviour, so it is checked here by capturing stdout — naming the
+// stubbed function plus a "stub called" / "Stub location:" marker.
+
+TEST(DisplayStubLog, VoidStubLogsTraceLineNamingTheFunction)
+{
+    testing::internal::CaptureStdout();
+    display_clear();
+    const std::string out = testing::internal::GetCapturedStdout();
+    EXPECT_NE(out.find("display_clear"), std::string::npos) << out;
+    EXPECT_NE(out.find("stub called"), std::string::npos) << out;
+    EXPECT_NE(out.find("Stub location:"), std::string::npos) << out;
+}
+
+TEST(RngStubLog, NonVoidStubLogsBeforeReturningTheSafeDefault)
+{
+    testing::internal::CaptureStdout();
+    const unsigned int value = rng_next();   // value stub: logs, then returns 0
+    const std::string out = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(value, 0u);
+    EXPECT_NE(out.find("rng_next"), std::string::npos) << out;
+    EXPECT_NE(out.find("stub called"), std::string::npos) << out;
 }
