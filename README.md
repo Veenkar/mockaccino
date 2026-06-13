@@ -1,69 +1,176 @@
-# MOCKACCINO
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Veenkar/mockaccino/master/images/mockaccino_icon.png" alt="Mockaccino" width="128" />
+</p>
 
-Gtest mock generators for C-files.
+<h1 align="center">Mockaccino</h1>
 
-Generates a mock header and source file with mocked functions from the original C langauge file.
+<p align="center">Generate C++ <a href="https://github.com/google/googletest">GoogleMock</a> mocks and stubs from C source/header files — one command, no boilerplate.</p>
 
-The header contains a C++ class that has mocked methods with the same name and signatures as the original functions.
+---
 
-In the generated mock source file (filename_mock.cc), all the calls to the stubbed C functions functions lead to the respective mock methods inside the class.
-This allows easy C function mocking with gtest.
+Writing unit tests for C code means faking its dependencies, and hand-writing a gmock wrapper for every function in a header is slow, repetitive work. **Mockaccino does it for you:** point it at a `.c`/`.h` file and it generates a ready-to-compile gmock mock class (plus the C-linkage wrappers that route the real C calls into it), or a lightweight stub.
 
+It's built for the people who feel that pain most: **testing embedded, firmware, or legacy C with a C++/GoogleTest harness**, where the dependency you want to fake is a header full of plain C functions.
 
-## Installation
-Download the extension from VS Code marketplace:
+## Why Mockaccino
 
-https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+There are two ways to turn C into mocks, and Mockaccino ships **both**, switchable per command:
 
+| | **Regex backend** (default) | **Clang backend** |
+|---|---|---|
+| Command | *“… (regex)”* | *“… (clang)”* |
+| Needs a compilable file + resolvable includes | **No** | Yes |
+| Unknown/vendor type modifiers (e.g. AUTOSAR `FUNC(...)`, `P2VAR(...)`) | Handled via configurable macro definitions | Resolved by the compiler |
+| External tools | **None** — pure TypeScript | A `clang` binary |
+| Best for | Vendor/AUTOSAR headers, legacy code, half-finished or non-compiling snippets | Clean, compilable headers where you want exact type resolution |
 
-## Usage
-To use Mockaccino:
- - Install the extension from VS Code marketplace.
- - Open a C source or heder file.
- - Use COMMAND PALETTE -> "Mockaccino: mock current file".
- - The mock files will be generated in the same folder that have _mock appended to their name.
+The **regex backend** is the original superpower: it parses with regular expressions, not a real compiler, so it generates a usable mock **without resolving includes, building the project, or understanding your custom type modifiers**. That's exactly the situation embedded/legacy C testing puts you in — and where compiler-based tools tend to choke.
 
-This way, a pair of a header and a C++ source file are generated that can be used to mock the C code using gtest.
+The **clang backend** covers the other half: when your header *is* clean and compilable, it asks a real `clang` for the truth, so includes, typedefs, and struct-by-value parameters resolve precisely.
 
-## Parsing Mechanism
-The preprocessor directives contained in the original file as well as in the prepended preprocessor directives from the settings of this extension are processed before parsing the file.
+## Quick start
 
-In the current version the real include files are not parsed.
-This is not required because this extensions is using regex to parse the files, not relying on an AST generated from a true language parser.
-Because of this, Mockaccino does not need to know any type identifiers before parsing the original functions.
+1. Install **Mockaccino** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino).
+2. Open a C source or header file.
+3. Open the Command Palette (`Ctrl/Cmd+Shift+P`) and run one of:
+   - **Mockaccino: mock current file (regex)**
+   - **Mockaccino: stub current file (regex)**
+   - **Mockaccino: mock current file (clang)**
+   - **Mockaccino: stub current file (clang)**
+4. The generated files appear next to your input (or in `mockaccino.outputPath`), with `_mock` / `_stub` appended.
 
-Moreover, all the unnecessary content from the input files is removed prior to regex matching.
-This way, Mockaccino does not even need to parse this part of input files, which is useless from the mock generation perspective.
+<!-- Maintainer note: a short header-in → mock-out demo GIF would shine here. -->
 
+## What it generates
 
+### Mock (`_mock.h` + `_mock.cc`)
+
+Given a header:
+
+```c
+/* display.h */
+typedef struct { int x, y; } Viewport;
+
+void        display_init(void);
+int         display_width(void);
+const char *display_backend_name(void);
+void        display_draw_cell(int x, int y, int alive);
+void        display_set_viewport(Viewport vp);
+```
+
+Mockaccino produces a mock class…
+
+```cpp
+/* display_mock.h */
+class Display_Mock {
+public:
+    Display_Mock();
+    virtual ~Display_Mock();
+    MOCK_METHOD(void, display_init, ());
+    MOCK_METHOD(int, display_width, ());
+    MOCK_METHOD(const char *, display_backend_name, ());
+    MOCK_METHOD(void, display_draw_cell, (int, int, int));
+    MOCK_METHOD(void, display_set_viewport, (Viewport));
+};
+```
+
+…and C-linkage wrappers that forward every call to the active mock instance:
+
+```cpp
+/* display_mock.cc */
+void display_draw_cell(int x, int y, int alive)
+{
+    DISPLAY_MOCK_ASSERT_INSTANCE_EXISTS();
+    return display_mock_->display_draw_cell(x, y, alive);
+}
+```
+
+So your test links the generated `.cc` instead of the real `display.c`, and drives it with gmock:
+
+```cpp
+TEST(EngineTest, RendersEveryCell) {
+    Display_Mock display;   // construction registers it as the active mock
+    EXPECT_CALL(display, display_draw_cell(_, _, _)).Times(WIDTH * HEIGHT);
+
+    engine_render();        // the C code under test calls the C functions
+}                           // destruction clears the active mock
+```
+
+### Stub (`_stub.cc`)
+
+A lighter alternative when you just need the symbols to link and return safe defaults — each stub prints a trace line and returns `0` / `nullptr` / nothing:
+
+```cpp
+const char *display_backend_name()
+{
+    DISPLAY_STUB_PRINT_INFO();
+    return nullptr;
+}
+int display_width()
+{
+    DISPLAY_STUB_PRINT_INFO();
+    return static_cast<int>(0);
+}
+```
+
+(A mock and a stub can't define the same symbol in one binary — use one or the other per test executable.)
 
 ## Configuration
-In settings of this extension it is possible to configure predefined preprocessor macros that can be used with each file to help with parsing modifiers unknown to Mockaccino.
 
-Also a copyright notice for the generated files can be set.
+All settings live under `mockaccino.*` in VS Code settings.
 
+**General**
 
-## Features
-- Does not have any external dependencies or any other external parser or compiler.
-- Written in pure TypeScript!
-- No search for or reading of the included headers is required, as the syntax parsing is based on regex.
-- Preprocessor handling is supported, so preprocessor directives from the current file are interpreted correctly
-- Unmeaningful content is removed prior to performing parsing (e.g. contents of functions)
-- Since parsing does not involve AST, this extension does not have to be able to compile the file by parsing all the includes.
-- Regex parsing also gives possibility for parsing unusual C dialects, as it does not have to understand non-standard modifiers.
-- If the file that was used for generation compiles, the tests should also compile with gmock.
-- Possiblity to configure copyright statement
-- Adding custom defines before parsing the source code
-- Possibility to generate mocks from both source and header files.
+| Setting | Description |
+|---|---|
+| `outputPath` | Where to write generated files. Supports `${workspaceFolder}`. Empty → next to the input file. |
+| `ignoredFunctionNames` | Comma-separated function names to skip (e.g. `main`). |
+| `skipStaticFunctions` | Skip `static` functions. |
+| `skipExternFunctions` | Skip `extern` functions. |
+| `skipFunctionsWithImplicitReturnType` | Skip functions with an implicit (`int`) return — these are often function-like macros. |
+| `disableDoubleMocking` | Don't mock files that already contain `_mock` / `_stub` in their name. |
+| `copyright` | Copyright notice inserted into generated files (`$YEAR` is expanded). |
 
-## VS Code marketplace
-https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+**Regex backend**
 
-## Github
-https://github.com/Veenkar/mockaccino
+| Setting | Description |
+|---|---|
+| `additionalPreprocessorDirectives` | Macro definitions prepended before parsing — teach Mockaccino your vendor modifiers (`FUNC`, `P2VAR`, …) so they resolve to plain types. |
+| `treatLonelyPreprocIfAsActive` | Treat a lone `#if … #endif` as active, so conditionally-compiled functions still get mocked. |
 
-## Contact e-mail
-veenkar@gmail.com
+**Clang backend**
 
-# License
-Licensed using GNU GPL v3
+| Setting | Description |
+|---|---|
+| `clangPath` | Path to the `clang` executable. Empty → use `clang` on `PATH`. |
+| `includeDirectories` | `-I` project include dirs. Supports `${workspaceFolder}`. |
+| `clangSystemHeaderPaths` | `-isystem` system header dirs (a custom libc/SDK). Leave empty to use clang's own headers. |
+| `clangExtraArgs` | Extra clang arguments passed verbatim (`-nostdinc`, `-resource-dir=…`, `-target=…`, `-std=c11`). |
+
+> The clang backend also reads include paths from the C/C++ extension's configuration (`C_Cpp.default.includePath` and `.vscode/c_cpp_properties.json`). When a header exists in more than one include directory, clang uses the first match in `-I` order — Mockaccino lists your `includeDirectories` first, so they win.
+
+## How parsing works
+
+- **Regex backend** — the file's preprocessor directives (and any you add in settings) are evaluated, comments and function bodies are stripped, and the remaining function declarations are matched with regular expressions. No include is read and no AST is built, so it needs no knowledge of your type names and tolerates unusual C dialects. The trade-off: very unusual declarators may need a helper macro definition (or the clang backend).
+- **Clang backend** — the source is handed to `clang -ast-dump=json` (fed on stdin, so unsaved edits and `#include "sibling.h"` both work). Mockaccino reads the resulting AST and mocks only the functions **declared in the opened file** — includes are parsed for type resolution but not mocked.
+
+## Requirements
+
+- **Regex backend:** none.
+- **Clang backend:** a `clang` executable on `PATH` or set via `mockaccino.clangPath`.
+
+## Scope & limitations
+
+- Mockaccino mocks **free C functions** (C-linkage symbols) — it is not a mock generator for C++ classes, virtual methods, or overloads.
+- The regex backend is heuristic by design: most signatures are handled, but exotic declarators (e.g. function-pointer parameters) may need a configured macro or the clang backend.
+- The clang backend needs the file — and the includes its signatures depend on — to parse.
+
+## Links
+
+- **Marketplace:** https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino
+- **GitHub:** https://github.com/Veenkar/mockaccino
+- **Contact:** veenkar@gmail.com
+
+## License
+
+Licensed under the GNU GPL v3.
