@@ -3,6 +3,7 @@ var RegexParserLib = require("./regex_parser");
 var RegexParser = RegexParserLib.RegexParser;
 var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
 var Naming = require("./naming");
+var TemplateContext = require("./template_context");
 var ImplGenerator = require("./impl_generator");
 var TemplateRenderer = require("./template_renderer");
 var FileWriter = require("./file_writer");
@@ -16,35 +17,17 @@ interface GenerationResult {
 
 
 /* Orchestrator. Owns config parsing and the preprocessing pipeline, then wires
-   together the single-responsibility collaborators (Naming, ImplGenerator,
-   TemplateRenderer, FileWriter) to produce the mock/stub files. The name fields
-   are mirrored onto the instance because the templates reference them as
-   `instance.*` and the tests read them directly. */
+   together the single-responsibility collaborators (Naming, TemplateContext,
+   ImplGenerator, TemplateRenderer, FileWriter) to produce the mock/stub files.
+   The values the templates and tests read are owned by `naming` (derived names)
+   and `context` (names + per-run doc metadata) rather than mirrored as fields. */
 class Mockaccino {
 	private config: any;
-	private content_raw: string;
-	private content: string;
 	private uri: any;
-	private version: string;
-	private copyright!: string;
-	private localTime!: string;
-	private output_path: string = "";
-	private workspace_folder: string = "";
-	private ignored_function_names: string[] = [];
-	private template_path: string;
+	private naming: any;
+	private context: typeof TemplateContext;
 	public c_functions_strings: string[] = [];
 	public file_written: string = "";
-
-	// Mirrored from Naming for the template `instance.*` contract and the tests.
-	private naming: any;
-	public name: string;
-	public caps_name: string;
-	public header_name: string;
-	public mock_name: string;
-	public mock_instance_name: string;
-	public caps_mock_name: string;
-	public caps_stub_name: string;
-	public filename: string;
 
 	private regexParser: typeof RegexParser;
 	private implGenerator: any;
@@ -53,70 +36,64 @@ class Mockaccino {
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
-		this.content_raw = content;
 		this.uri = uri;
-		this.version = version;
-		this.workspace_folder = workspace_folder;
-		this.template_path = template_path;
 
-		this.parseConfig();
-		this.content = this.preprocess();
+		const ignored_function_names = this.parseIgnoredFunctionNames();
+		const { localTime, copyright } = this.buildDocMetadata();
+		this.c_functions_strings = this.preprocess(content);
 
 		this.naming = new Naming(this.uri.fsPath);
-		this.name = this.naming.name;
-		this.caps_name = this.naming.caps_name;
-		this.header_name = this.naming.header_name;
-		this.mock_name = this.naming.mock_name;
-		this.mock_instance_name = this.naming.mock_instance_name;
-		this.caps_mock_name = this.naming.caps_mock_name;
-		this.caps_stub_name = this.naming.caps_stub_name;
-		this.filename = this.naming.filename;
+		this.context = new TemplateContext(this.naming, version, localTime, copyright);
 
-		this.resolveOutputPath();
+		const output_path = this.resolveOutputPath(workspace_folder);
 
 		const parserConfig: ParserConfig = {
 			skip_functions_with_implicit_return_type: this.config.get('skipFunctionsWithImplicitReturnType'),
 			skip_static_functions: this.config.get('skipStaticFunctions'),
 			skip_extern_functions: this.config.get('skipExternFunctions'),
-			ignored_function_names: this.ignored_function_names,
+			ignored_function_names: ignored_function_names,
 		};
 		this.regexParser = new RegexParser(parserConfig, this.c_functions_strings);
-		this.implGenerator = new ImplGenerator(this.regexParser, this.caps_mock_name, this.caps_stub_name, this.mock_instance_name);
-		this.renderer = new TemplateRenderer(this.template_path, this);
-		this.writer = new FileWriter(this.output_path, this.naming);
+		this.implGenerator = new ImplGenerator(this.regexParser, this.naming.caps_mock_name, this.naming.caps_stub_name, this.naming.mock_instance_name);
+		this.renderer = new TemplateRenderer(template_path, this.context);
+		this.writer = new FileWriter(output_path, this.naming);
 
-		console.log(`Output path: ${this.output_path}`);
+		console.log(`Output path: ${output_path}`);
 	}
 
-	private parseConfig() {
+	private parseIgnoredFunctionNames(): string[] {
 		const ignored_function_names_string = this.config.get('ignoredFunctionNames');
-		if (typeof ignored_function_names_string === "string") {
-			this.ignored_function_names = ignored_function_names_string
-				.split(',')
-				.map((name: string) => name.trim())
-				.filter((name: string) => name.length > 0);
+		if (typeof ignored_function_names_string !== "string") {
+			return [];
 		}
+		return ignored_function_names_string
+			.split(',')
+			.map((name: string) => name.trim())
+			.filter((name: string) => name.length > 0);
+	}
 
+	private buildDocMetadata(): { localTime: string, copyright: string } {
 		const now = new Date();
 		const pad = (n: number) => n.toString().padStart(2, '0');
-		this.localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+		const localTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
 		const currentYear = now.getFullYear();
-		this.copyright = this.config.get('copyright')
+		const copyright = this.config.get('copyright')
 			.replace(/\$YEAR/g, currentYear)
 			.split("\n")
 			.map((line: string) => ` * ${line}`)
-			.join("\n");
-		this.copyright = this.copyright.replace(/[ \t]+$/gm, "");
+			.join("\n")
+			.replace(/[ \t]+$/gm, "");
+		return { localTime, copyright };
 	}
 
-	private preprocess(): string {
+	private preprocess(content_raw: string): string[] {
 		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
 		const lonely_if_active = this.config.get('treatLonelyPreprocIfAsActive');
 
 		console.log(`Add preproc: ${additional_preprocessor_directives}`);
 		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
-			${this.content_raw}`);
+			${content_raw}`);
 		preprocessor.removeComments().mergeLineEscapes().removeExternC();
 		if (lonely_if_active) {
 			preprocessor.activateSimpleIfBlocks();
@@ -125,26 +102,26 @@ class Mockaccino {
 		preprocessor.input = additional_preprocessor_directives + "\n" + preprocessor.input;
 		preprocessor.preprocess();
 		preprocessor.removePreprocessorDirectives().removeCompoundExpressions().filterByRoundBraces();
-		const content = preprocessor.get();
-		this.c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
 		console.log("preproc:");
-		console.log(content);
+		console.log(preprocessor.get());
+		const c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
 		console.log("fun strings:");
-		console.log(this.c_functions_strings);
-		return content;
+		console.log(c_functions_strings);
+		return c_functions_strings;
 	}
 
-	private resolveOutputPath() {
-		this.output_path = this.config.get('outputPath') || "";
-		if (this.output_path.includes("${workspaceFolder}")) {
-			if (this.workspace_folder === "") {
+	private resolveOutputPath(workspace_folder: string): string {
+		let output_path = this.config.get('outputPath') || "";
+		if (output_path.includes("${workspaceFolder}")) {
+			if (workspace_folder === "") {
 				console.log("Not in a workspace, files will be put in the input file folder.");
-				this.output_path = "";
+				output_path = "";
 			}
 			else {
-				this.output_path = this.output_path.replace("${workspaceFolder}", this.workspace_folder);
+				output_path = output_path.replace("${workspaceFolder}", workspace_folder);
 			}
 		}
+		return output_path;
 	}
 
 	public mock(): GenerationResult {
@@ -217,8 +194,9 @@ class Mockaccino {
 		if (!this.config.disableDoubleMocking) {
 			return false;
 		}
-		const dotIndex = this.filename.lastIndexOf('.');
-		const baseName = dotIndex !== -1 ? this.filename.slice(0, dotIndex) : this.filename;
+		const filename = this.naming.filename;
+		const dotIndex = filename.lastIndexOf('.');
+		const baseName = dotIndex !== -1 ? filename.slice(0, dotIndex) : filename;
 		return new RegExp(`${suffix}$`, 'i').test(baseName);
 	}
 

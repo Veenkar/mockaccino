@@ -62,13 +62,13 @@ suite('Mockaccino', () => {
 			const m = new Mockaccino(
 				'int foo(void);', makeUri('/proj/widget.c'), makeConfig(), '1.0.0', '', TEMPLATES
 			);
-			assert.strictEqual(m.name, 'widget');
-			assert.strictEqual(m.caps_name, 'WIDGET');
-			assert.strictEqual(m.header_name, 'widget.h');
-			assert.strictEqual(m.mock_name, 'Widget_Mock');
-			assert.strictEqual(m.mock_instance_name, 'widget_mock_');
-			assert.strictEqual(m.caps_mock_name, 'WIDGET_MOCK');
-			assert.strictEqual(m.caps_stub_name, 'WIDGET_STUB');
+			assert.strictEqual(m.naming.name, 'widget');
+			assert.strictEqual(m.naming.caps_name, 'WIDGET');
+			assert.strictEqual(m.naming.header_name, 'widget.h');
+			assert.strictEqual(m.naming.mock_name, 'Widget_Mock');
+			assert.strictEqual(m.naming.mock_instance_name, 'widget_mock_');
+			assert.strictEqual(m.naming.caps_mock_name, 'WIDGET_MOCK');
+			assert.strictEqual(m.naming.caps_stub_name, 'WIDGET_STUB');
 		});
 
 		test('parses the function declarations out of the input body', () => {
