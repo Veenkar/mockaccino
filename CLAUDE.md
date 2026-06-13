@@ -19,8 +19,17 @@ npm run test:unit      # fast: compile + run pure-module unit tests via plain mo
 ```
 
 Two test paths:
-- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js`. Covers `preprocessor`, `regex_parser`, `interpolator`, and `mockaccino` (the orchestrator, driven against the real templates with `config`/`uri` mocked and output sent to a temp dir) without downloading/launching VS Code. Use this for the fast refactor loop.
-- **`npm run test`** — launches a headless Electron VS Code; required only for tests that import the `vscode` API (currently just `extension.test.ts`).
+- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js` and `acceptance.test.js`. Covers `preprocessor`, `regex_parser`, `interpolator`, and `mockaccino` (the orchestrator, driven against the real templates with `config`/`uri` mocked and output sent to a temp dir) without downloading/launching VS Code. Use this for the fast refactor loop.
+- **`npm run test`** — launches a headless Electron VS Code; required for tests that import the `vscode` API: `extension.test.ts` and the **acceptance tests** (`acceptance.test.ts`).
+
+### Acceptance tests (`src/test/acceptance.test.ts`)
+
+End-to-end golden-file tests that run the *real* `mockaccino.mockCurrentFile` / `mockaccino.stubCurrentFile` commands inside the Electron host and compare the generated files to committed references. Data-driven and fixture-discovered, so adding a case needs no test code change.
+
+- **Fixtures** live in `src/test/fixtures/<case>/` — one folder per input file. The single `.c`/`.h` input sits at the case-folder root; its golden outputs live in `<case>/expected/` as `<name>_mock.h`, `<name>_mock.cc`, `<name>_stub.cc`. The mock command runs when a `_mock.*` golden exists; the stub command runs when `_stub.cc` exists.
+- **`.c` vs `.h` are separate cases.** Either can be mocked/stubbed (definitions vs declarations), and the output differs (most visibly the `INPUT:` line, plus edge-case parsing), so each input file gets its own case folder and goldens (e.g. `main_c` for `main.c`, `main_h` for `main.h`).
+- **Config** is pinned to the package.json defaults (the goldens were generated with defaults), pulled at runtime from `contributes.configuration.properties` and written via `ConfigurationTarget.Global`; only `outputPath` is overridden to a temp dir so generated files never overwrite the committed goldens. Config is restored in teardown.
+- **Normalization:** the three volatile values — the `TIME:` line, the `VERSION:` line, and the copyright **year** — are rewritten to placeholders on both sides before `assert.strictEqual`, plus CRLF→LF. If a comparison fails on anything else, that's a real generator change — regenerate the golden (don't widen normalization to hide it).
 
 Unit tests live in `src/test/*.test.ts` and `require()` the **compiled** sibling module (e.g. `require('../preprocessor')` → `out/preprocessor.js`), not the `.ts` source. They use mocha's TDD interface (`suite`/`test`) to match the harness. Only `extension.ts` can't be unit-tested this way — it imports the `vscode` API, which exists only inside the Electron host. (`mockaccino.ts` became testable once its internal requires were switched from the literal `require("./preprocessor.ts")` to extensionless `require("./preprocessor")`, which resolves under both esbuild and plain Node.)
 
