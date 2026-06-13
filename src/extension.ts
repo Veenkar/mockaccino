@@ -7,8 +7,31 @@ import * as path from 'path';
 // includes/types via a real compiler (see clang_mockaccino.ts).
 var RegexMockaccino = require("./regex_mockaccino");
 var ClangMockaccino = require("./clang_mockaccino");
+var IncludePaths = require("./include_paths");
 
 type Operation = 'mock' | 'stub';
+
+// Include directories from the VS Code C/C++ configuration, for the clang
+// backend. Two sources: the `C_Cpp.default.includePath` setting (read via the
+// config API, JSONC-aware) and the includePath arrays in c_cpp_properties.json
+// (parsed directly — that file is not exposed through the config API). The
+// clang backend merges these *after* mockaccino.includeDirectories.
+function gatherClangIncludeDirs(workspaceFolder: string): string[] {
+	const raw: string[] = [];
+
+	const cpp = vscode.workspace.getConfiguration('C_Cpp');
+	const fromSettings = cpp.get<string[]>('default.includePath');
+	if (Array.isArray(fromSettings)) {
+		raw.push(...fromSettings);
+	}
+
+	if (workspaceFolder) {
+		const propsPath = path.join(workspaceFolder, '.vscode', 'c_cpp_properties.json');
+		raw.push(...IncludePaths.fromCCppPropertiesFile(propsPath));
+	}
+
+	return IncludePaths.normalize(raw, workspaceFolder);
+}
 
 // Shared command body: read the active editor + config, construct the chosen
 // backend, run the operation, and report the result. Backend constructors may
@@ -35,8 +58,12 @@ function runGeneration(context: vscode.ExtensionContext, BackendClass: any, oper
 
 	const template_path = context.asAbsolutePath(path.join('templates'));
 
+	// Only the clang backend consumes external include dirs; gathering reads
+	// config + a file, so skip it for the regex backend.
+	const externalIncludeDirs = BackendClass === ClangMockaccino ? gatherClangIncludeDirs(wf) : [];
+
 	try {
-		const mockaccino = new BackendClass(content, uri, config, version, wf, template_path);
+		const mockaccino = new BackendClass(content, uri, config, version, wf, template_path, externalIncludeDirs);
 		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
 		if (result.result === 0) {
 			vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);

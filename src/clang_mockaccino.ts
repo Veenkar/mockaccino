@@ -1,6 +1,7 @@
 var Mockaccino = require("./mockaccino");
 var ClangParser = require("./clang_parser");
 var FunctionStringifier = require("./function_stringifier");
+var IncludePaths = require("./include_paths");
 
 
 /* Clang-based backend. Drives a real clang (`-ast-dump=json`) so includes and
@@ -23,14 +24,19 @@ class ClangMockaccino extends Mockaccino {
 	private parser: any;
 	private stringifier: typeof FunctionStringifier;
 	private workspace_folder: string;
+	private external_include_dirs: string[];
 	private functions: any[] | undefined;
 
-	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
+	/* external_include_dirs are include directories the caller gathered from the
+	   VS Code C/C++ configuration (extension.ts owns that, since it needs the
+	   vscode API). They are merged *after* mockaccino.includeDirectories. */
+	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string, external_include_dirs: string[] = []) {
 		super(uri, config, version, workspace_folder, template_path);
 
 		this.content = content;
 		this.fsPath = uri.fsPath;
 		this.workspace_folder = workspace_folder;
+		this.external_include_dirs = external_include_dirs || [];
 
 		const clangPath = this.config.get('clangPath') || 'clang';
 		this.parser = new ClangParser(clangPath, this.buildCompilerArgs());
@@ -99,10 +105,19 @@ class ClangMockaccino extends Mockaccino {
 	}
 
 	/* -I for project includes, -isystem for system header paths, plus any verbatim
-	   extra args. ${workspaceFolder} is expanded the same way outputPath is. */
+	   extra args. ${workspaceFolder} is expanded the same way outputPath is.
+
+	   Include order matters: clang resolves each #include to the first match in
+	   -I order, so a header duplicated across dirs is taken from the earliest one.
+	   mockaccino.includeDirectories come first (explicit user intent), then the
+	   dirs gathered from the VS Code C/C++ config; the merged list is deduped. */
 	private buildCompilerArgs(): string[] {
 		const args: string[] = [];
-		for (const dir of this.readDirList('includeDirectories')) {
+		const includeDirs = IncludePaths.normalize(
+			[...this.readDirList('includeDirectories'), ...this.external_include_dirs],
+			this.workspace_folder,
+		);
+		for (const dir of includeDirs) {
 			args.push('-I' + dir);
 		}
 		for (const dir of this.readDirList('clangSystemHeaderPaths')) {
