@@ -35,8 +35,8 @@ class RegexMockaccino extends Mockaccino {
 	}
 
 	protected getMockMethodStrings(): string[] {
-		return this.regexParser.getFunctions().map((fn: FunctionInfo) =>
-			this.stringifier.mockMethod(fn.returnType, fn.name, RegexParserToolbox.removeArgumentName_ProcessArguments(fn.arguments))
+		return this.regexParser.getFunctions().map((c_func_info: FunctionInfo) =>
+			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, RegexParserToolbox.removeArgumentName_ProcessArguments(c_func_info.arguments))
 		);
 	}
 

@@ -44,20 +44,20 @@ class ClangMockaccino extends Mockaccino {
 	}
 
 	protected getMockMethodStrings(): string[] {
-		return this.getFunctions().map((fn) =>
-			this.stringifier.mockMethod(fn.returnType, fn.name, this.typesOnly(fn))
+		return this.getFunctions().map((c_func_info) =>
+			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, this.typesOnly(c_func_info))
 		);
 	}
 
 	protected getMockImplStrings(): string[] {
-		return this.getFunctions().map((fn) =>
-			this.stringifier.mockImpl(fn.returnType, fn.name, this.signature(fn), this.callArgs(fn))
+		return this.getFunctions().map((c_func_info) =>
+			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, this.signature(c_func_info), this.callArgs(c_func_info))
 		);
 	}
 
 	protected getStubImplStrings(): string[] {
-		return this.getFunctions().map((fn) =>
-			this.stringifier.stubImpl(fn.returnType, fn.name, this.typesOnly(fn))
+		return this.getFunctions().map((c_func_info) =>
+			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, this.typesOnly(c_func_info))
 		);
 	}
 
