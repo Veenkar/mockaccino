@@ -26,6 +26,12 @@ Unit tests live in `src/test/*.test.ts` and `require()` the **compiled** sibling
 
 To publish a new `.vsix`: `npx vsce package` (requires `vsce` globally or via npx).
 
+## Workflow conventions
+
+- **Always run tests after each change — no exceptions.** Run `npm run test:unit` (the fast path) after *every* change and confirm it passes before considering the change done. This applies even to changes that seem test-irrelevant (docs, config, comments) — always run them. Run `npm run test` as well when touching `extension.ts` or anything that imports the `vscode` API.
+- **Commit after each change, but do not push.** Once tests pass, commit the change with a focused message. Never `git push` — pushing is left to the user.
+- **New classes go in their own file.** When introducing a new class, create a separate source file for it (mirroring the existing one-class-per-file layout) rather than appending it to an existing module, unless it is a tiny private helper tightly coupled to its host. Remember the module-system quirk below: export with `if(typeof module === "object") module.exports = ...` and import via extensionless `require("./new_file")`.
+
 ## Architecture
 
 ### Processing pipeline (on each command invocation)
