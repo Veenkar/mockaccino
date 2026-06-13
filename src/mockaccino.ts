@@ -1,6 +1,6 @@
-var Preprocessor = require("./preprocessor.ts");
-var Interpolator = require("./interpolator.ts");
-var RegexParserLib = require("./regex_parser.ts");
+var Preprocessor = require("./preprocessor");
+var Interpolator = require("./interpolator");
+var RegexParserLib = require("./regex_parser");
 var RegexParser = RegexParserLib.RegexParser;
 var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
 const fs = require('fs');
@@ -11,6 +11,93 @@ interface GenerationResult {
 	result: number;
 	message: string;
 	mock_count: number;
+}
+
+
+/* Generates the C function-wrapper implementation bodies (the .cc strings) that
+   delegate to the mock instance or print stub info. Kept separate from Mockaccino,
+   which owns preprocessing, naming and file I/O. */
+class ImplGenerator {
+	constructor(
+		private regexParser: typeof RegexParser,
+		private caps_mock_name: string,
+		private caps_stub_name: string,
+		private mock_instance_name: string,
+	) {}
+
+	getMockImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments): string[] {
+		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		processArgumentsFunction);
+
+/* SOURCE TEMPLATE ---> */
+		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
+`
+{
+	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
+	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
+}
+`, RegexParserToolbox.extractArgumentName_ProcessArguments);
+/* <--- END SOURCE TEMPLATE */
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
+	}
+
+	getStubImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.removeArgumentName_ProcessArguments): string[] {
+		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
+			/* <--- SOURCE TEMPLATE */
+			`${fn.returnType} ${fn.name}(${fn.arguments})`,
+			/* <--- SOURCE TEMPLATE */
+		processArgumentsFunction);
+
+		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
+			{
+				var return_type = fn.returnType;
+				/* handle implicit return type */
+				if (!return_type) {
+					return_type = "int";
+				}
+
+				var return_statement = `\n\treturn static_cast<${fn.returnType}>(0);`;
+				if (return_type.indexOf('*') !== -1)
+				{
+					return_statement = "\n\treturn nullptr;";
+				}
+				else if (return_type === "void")
+				{
+					return_statement = "";
+				}
+				else
+				{
+					/* nothing */
+				}
+
+/* SOURCE TEMPLATE ---> */
+return `
+{
+	${this.caps_stub_name}_PRINT_INFO();${return_statement}
+}
+`;
+/* <--- END SOURCE TEMPLATE */
+
+			});
+
+		// Zip mock_decl_strs with mock_call_strs
+		const zipped: string[] = [];
+		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
+			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
+		}
+		return zipped;
+
+	}
 }
 
 
@@ -42,6 +129,7 @@ class Mockaccino {
 	private template_path: string;
 	private ParserConfig: ParserConfig;
 	private regexParser: typeof RegexParser;
+	private implGenerator: ImplGenerator;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
@@ -135,6 +223,7 @@ class Mockaccino {
 		};
 
 		this.regexParser = new RegexParser(this.ParserConfig, this.c_functions_strings);
+		this.implGenerator = new ImplGenerator(this.regexParser, this.caps_mock_name, this.caps_stub_name, this.mock_instance_name);
 
 		console.log(`Output path: ${this.output_path}`);
 	}
@@ -161,7 +250,7 @@ class Mockaccino {
 				`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, RegexParserToolbox.removeArgumentName_ProcessArguments
 			);
 			const mock_strings = mock_strings_list.join("\n");
-			const impl_strings = this.getMockImplStrings().join("\n");
+			const impl_strings = this.implGenerator.getMockImplStrings().join("\n");
 			// var decl_strings = this.regexParser.getFunctionStrings(RegexParserToolbox.defaultStringifyFunction).join("\n");
 			console.log("mock strings:");
 			console.log(mock_strings);
@@ -206,7 +295,7 @@ class Mockaccino {
 		}
 
 		if ("file" === this.uri.scheme) {
-			const stub_strings_list = this.getStubImplStrings();
+			const stub_strings_list = this.implGenerator.getStubImplStrings();
 			const stub_strings = stub_strings_list.join("\n");
 			console.log("stub strings:");
 			console.log(stub_strings);
@@ -359,82 +448,6 @@ private generateStubSrc(stub_strings: string) {
 	return interpolator.interpolate(template_file_contents);
 }
 
-
-/* === GENERATOR ZONE === */
-/* TODO: refactor to another class or mixin */
-	private getMockImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments): string[] {
-		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-			/* <--- SOURCE TEMPLATE */
-			`${fn.returnType} ${fn.name}(${fn.arguments})`,
-			/* <--- SOURCE TEMPLATE */
-		processArgumentsFunction);
-
-/* SOURCE TEMPLATE ---> */
-		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-`
-{
-	${this.caps_mock_name}_ASSERT_INSTANCE_EXISTS();
-	return ${this.mock_instance_name}->${fn.name}(${fn.arguments});
-}
-`, RegexParserToolbox.extractArgumentName_ProcessArguments);
-/* <--- END SOURCE TEMPLATE */
-
-		// Zip mock_decl_strs with mock_call_strs
-		const zipped: string[] = [];
-		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
-			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
-		}
-		return zipped;
-
-	}
-
-	private getStubImplStrings(processArgumentsFunction: (args: string) => string = RegexParserToolbox.removeArgumentName_ProcessArguments): string[] {
-		const mock_decl_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-			/* <--- SOURCE TEMPLATE */
-			`${fn.returnType} ${fn.name}(${fn.arguments})`,
-			/* <--- SOURCE TEMPLATE */
-		processArgumentsFunction);
-
-		const mock_call_strs = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-			{
-				var return_type = fn.returnType;
-				/* handle implicit return type */
-				if (!return_type) {
-					return_type = "int";
-				}
-
-				var return_statement = `\n\treturn static_cast<${fn.returnType}>(0);`;
-				if (return_type.indexOf('*') !== -1)
-				{
-					return_statement = "\n\treturn nullptr;";
-				}
-				else if (return_type === "void")
-				{
-					return_statement = "";
-				}
-				else
-				{
-					/* nothing */
-				}
-
-/* SOURCE TEMPLATE ---> */
-return `
-{
-	${this.caps_stub_name}_PRINT_INFO();${return_statement}
-}
-`;
-/* <--- END SOURCE TEMPLATE */
-
-			});
-
-		// Zip mock_decl_strs with mock_call_strs
-		const zipped: string[] = [];
-		for (let i = 0; i < Math.min(mock_decl_strs.length, mock_call_strs.length); i++) {
-			zipped.push(`${mock_decl_strs[i]}${mock_call_strs[i]}`);
-		}
-		return zipped;
-
-	}
 
 }
 
