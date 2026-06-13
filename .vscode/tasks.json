@@ -59,6 +59,23 @@
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
+		},
+		{
+			"label": "test: all (PowerShell)",
+			"detail": "Run unit, then Electron/acceptance, then the mandatory integration suite; stops at the first failure.",
+			"type": "shell",
+			"command": "npm run test:unit; if ($?) { npm test }; if ($?) { npm run test:integration }",
+			"options": {
+				"shell": {
+					"executable": "powershell.exe",
+					"args": [
+						"-NoProfile",
+						"-Command"
+					]
+				}
+			},
+			"problemMatcher": [],
+			"group": "test"
 		}
 	]
 }
