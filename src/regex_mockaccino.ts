@@ -2,6 +2,7 @@ var Preprocessor = require("./preprocessor");
 var RegexParserLib = require("./regex_parser");
 var RegexParser = RegexParserLib.RegexParser;
 var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
+var FunctionStringifier = require("./function_stringifier");
 var ImplGenerator = require("./impl_generator");
 var Mockaccino = require("./mockaccino");
 
@@ -14,6 +15,7 @@ var Mockaccino = require("./mockaccino");
 class RegexMockaccino extends Mockaccino {
 	public c_functions_strings: string[] = [];
 	private regexParser: typeof RegexParser;
+	private stringifier: typeof FunctionStringifier;
 	private implGenerator: any;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
@@ -28,12 +30,13 @@ class RegexMockaccino extends Mockaccino {
 			ignored_function_names: this.parseIgnoredFunctionNames(),
 		};
 		this.regexParser = new RegexParser(parserConfig, this.c_functions_strings);
-		this.implGenerator = new ImplGenerator(this.regexParser, this.naming.caps_mock_name, this.naming.caps_stub_name, this.naming.mock_instance_name);
+		this.stringifier = new FunctionStringifier(this.naming.caps_mock_name, this.naming.caps_stub_name, this.naming.mock_instance_name);
+		this.implGenerator = new ImplGenerator(this.regexParser, this.stringifier);
 	}
 
 	protected getMockMethodStrings(): string[] {
-		return this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-			`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, RegexParserToolbox.removeArgumentName_ProcessArguments
+		return this.regexParser.getFunctions().map((fn: FunctionInfo) =>
+			this.stringifier.mockMethod(fn.returnType, fn.name, RegexParserToolbox.removeArgumentName_ProcessArguments(fn.arguments))
 		);
 	}
 

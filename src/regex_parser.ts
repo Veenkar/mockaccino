@@ -8,25 +8,13 @@ class RegexParser
 		this.config = config;
 	}
 
-	public getFunctionStrings(
-		stringifyFunction: (fn: FunctionInfo) => string = RegexParserToolbox.defaultStringifyFunction,
-		processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments
-	): string[] {
-		let mappedFunctionsStrings: string[] = [];
-		let mappedFunctions: FunctionInfo[] = [];
-
- 		/* REGEX method */
-		const functionDeclarations = this.c_functions_strings;
-		mappedFunctions = functionDeclarations.map((fn: string) => ({
+	/* Parse + filter the candidate declaration strings into FunctionInfo[], with
+	   `arguments` left as the raw (parsed) argument text. This is the structured
+	   list both getFunctionStrings() and ImplGenerator build their output from. */
+	public getFunctions(): FunctionInfo[] {
+		/* REGEX method */
+		let mappedFunctions: FunctionInfo[] = this.c_functions_strings.map((fn: string) => ({
 			...RegexParserToolbox.parseFunctionDeclaration(fn, this.config.skip_functions_with_implicit_return_type)
-		}));
-
-		mappedFunctions = mappedFunctions.map(fn => ({
-			returnType: fn.returnType,
-			name: fn.name,
-			arguments: processArgumentsFunction(fn.arguments),
-			is_static: fn.is_static,
-			is_extern: fn.is_extern,
 		}));
 
 		if (this.config.skip_static_functions) {
@@ -52,9 +40,16 @@ class RegexParser
 
 		mappedFunctions = mappedFunctions.filter(fn => fn.name && fn.name.trim().length > 0);
 
-		mappedFunctionsStrings = mappedFunctions.map(stringifyFunction);
-		//console.log(`Mapped functions:\n${JSON.stringify(mappedFunctions, null, 1)}`);
-		return mappedFunctionsStrings;
+		return mappedFunctions;
+	}
+
+	public getFunctionStrings(
+		stringifyFunction: (fn: FunctionInfo) => string = RegexParserToolbox.defaultStringifyFunction,
+		processArgumentsFunction: (args: string) => string = RegexParserToolbox.defaultProcessArguments
+	): string[] {
+		return this.getFunctions()
+			.map(fn => ({ ...fn, arguments: processArgumentsFunction(fn.arguments) }))
+			.map(stringifyFunction);
 	}
 
 
