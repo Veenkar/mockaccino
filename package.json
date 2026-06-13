@@ -84,7 +84,28 @@
             "type": "string"
           },
           "default": [],
-          "description": "Include directories passed to the clang parser backend (unused by the default regex backend). ${workspaceFolder} can be used in each entry."
+          "description": "Include directories passed to the clang parser backend as -I (unused by the default regex backend). ${workspaceFolder} can be used in each entry."
+        },
+        "mockaccino.clangPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the clang executable used by the clang parser backend. If empty, 'clang' is looked up on PATH."
+        },
+        "mockaccino.clangSystemHeaderPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "System header directories passed to clang as -isystem (e.g. a custom libc/SDK). Leave empty to use clang's own matching/built-in headers. ${workspaceFolder} can be used in each entry."
+        },
+        "mockaccino.clangExtraArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra arguments passed verbatim to clang (e.g. -nostdinc, -resource-dir=..., -target=..., -std=c11). Escape hatch for controlling the header search and target."
         }
       }
     }

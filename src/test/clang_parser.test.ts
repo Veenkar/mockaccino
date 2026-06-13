@@ -1,0 +1,83 @@
+import * as assert from 'assert';
+
+// Compiled sibling module (no clang needed for the pure AST-mapping logic).
+const ClangParser = require('../clang_parser');
+
+suite('ClangParser.returnTypeOf', () => {
+	test('strips the top-level parameter list', () => {
+		assert.strictEqual(ClangParser.returnTypeOf('void (int, int)'), 'void');
+		assert.strictEqual(ClangParser.returnTypeOf('int (void)'), 'int');
+		assert.strictEqual(ClangParser.returnTypeOf('const char *(void)'), 'const char *');
+	});
+
+	test('keeps parens that belong to the return type, not the param list', () => {
+		// pointer-to-function return: the first top-level paren is the param list
+		assert.strictEqual(ClangParser.returnTypeOf('struct S (int)'), 'struct S');
+	});
+});
+
+suite('ClangParser.isMainFile', () => {
+	test('only the stdin translation unit is the target', () => {
+		assert.strictEqual(ClangParser.isMainFile('<stdin>'), true);
+		assert.strictEqual(ClangParser.isMainFile('/usr/include/stdio.h'), false);
+		assert.strictEqual(ClangParser.isMainFile('.\\display.h'), false);
+	});
+});
+
+suite('ClangParser.extractTargetFunctions', () => {
+	// Minimal stand-in for clang's JSON AST. clang only emits loc.file when it
+	// changes between siblings, so nodes before the first loc.file are <stdin>.
+	const ast = {
+		kind: 'TranslationUnitDecl',
+		inner: [
+			{ kind: 'TypedefDecl', isImplicit: true },                 // not a function
+			{ kind: 'FunctionDecl', isImplicit: true, name: '__builtin' }, // implicit -> skip
+			{
+				kind: 'FunctionDecl', name: 'foo', type: { qualType: 'int (int, const char *)' },
+				inner: [
+					{ kind: 'ParmVarDecl', name: 'a', type: { qualType: 'int' } },
+					{ kind: 'ParmVarDecl', name: 'b', type: { qualType: 'const char *' } },
+				],
+			},
+			{ kind: 'FunctionDecl', name: 'hidden', storageClass: 'static', type: { qualType: 'void (void)' }, inner: [] },
+			{
+				kind: 'FunctionDecl', name: 'logf', type: { qualType: 'int (const char *, ...)' },
+				inner: [{ kind: 'ParmVarDecl', name: 'fmt', type: { qualType: 'const char *' } }],
+			},
+			{ kind: 'FunctionDecl', name: '', type: { qualType: 'void (void)' }, inner: [] }, // anonymous -> skip
+			// switch into an included header: everything here must be filtered out
+			{ loc: { file: '/usr/include/stdio.h' }, kind: 'FunctionDecl', name: 'printf', type: { qualType: 'int (const char *, ...)' }, inner: [] },
+			// switch back to the main file
+			{ loc: { file: '<stdin>' }, kind: 'FunctionDecl', name: 'after', type: { qualType: 'void (void)' }, inner: [] },
+		],
+	};
+
+	const fns = ClangParser.extractTargetFunctions(ast);
+
+	test('keeps only named, explicit functions from the main file', () => {
+		assert.deepStrictEqual(fns.map((f: any) => f.name), ['foo', 'hidden', 'logf', 'after']);
+	});
+
+	test('extracts return type and structured params', () => {
+		const foo = fns.find((f: any) => f.name === 'foo');
+		assert.strictEqual(foo.returnType, 'int');
+		assert.deepStrictEqual(foo.params, [
+			{ type: 'int', name: 'a' },
+			{ type: 'const char *', name: 'b' },
+		]);
+	});
+
+	test('detects the static storage class', () => {
+		assert.strictEqual(fns.find((f: any) => f.name === 'hidden').is_static, true);
+		assert.strictEqual(fns.find((f: any) => f.name === 'foo').is_static, false);
+	});
+
+	test('detects variadic functions', () => {
+		assert.strictEqual(fns.find((f: any) => f.name === 'logf').is_variadic, true);
+		assert.strictEqual(fns.find((f: any) => f.name === 'foo').is_variadic, false);
+	});
+
+	test('excludes declarations from included headers', () => {
+		assert.ok(!fns.some((f: any) => f.name === 'printf'), 'printf is from stdio.h and must be excluded');
+	});
+});
