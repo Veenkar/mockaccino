@@ -4,7 +4,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 // var parser = require("node-c-parser");
-var Mockaccino = require("./mockaccino");
+// Regex-parser backend (the only wired backend; ClangMockaccino is a scaffold).
+var RegexMockaccino = require("./regex_mockaccino");
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -40,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			const template_path = context.asAbsolutePath(path.join('templates'));
 
-			let mockaccino = new Mockaccino(content, uri, config, version, wf, template_path);
+			let mockaccino = new RegexMockaccino(content, uri, config, version, wf, template_path);
 			const result = mockaccino.mock();
 			if (result.result === 0) {
 				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
@@ -81,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 			const template_path = context.asAbsolutePath(path.join('templates'));
 
-			let mockaccino = new Mockaccino(content, uri, config, version, wf, template_path);
+			let mockaccino = new RegexMockaccino(content, uri, config, version, wf, template_path);
 			const result = mockaccino.stub();
 			if (result.result === 0) {
 				vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);

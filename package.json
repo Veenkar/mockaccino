@@ -77,6 +77,14 @@
           "type": "string",
           "default": "",
           "description": "Path where mocks should be generated. ${workspaceFolder} variable can be used here. If empty generate in the same location as input."
+        },
+        "mockaccino.includeDirectories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Include directories passed to the clang parser backend (unused by the default regex backend). ${workspaceFolder} can be used in each entry."
         }
       }
     }

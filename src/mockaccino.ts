@@ -1,10 +1,5 @@
-var Preprocessor = require("./preprocessor");
-var RegexParserLib = require("./regex_parser");
-var RegexParser = RegexParserLib.RegexParser;
-var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
 var Naming = require("./naming");
 var TemplateContext = require("./template_context");
-var ImplGenerator = require("./impl_generator");
 var TemplateRenderer = require("./template_renderer");
 var FileWriter = require("./file_writer");
 
@@ -16,52 +11,49 @@ interface GenerationResult {
 }
 
 
-/* Orchestrator. Owns config parsing and the preprocessing pipeline, then wires
-   together the single-responsibility collaborators (Naming, TemplateContext,
-   ImplGenerator, TemplateRenderer, FileWriter) to produce the mock/stub files.
-   The values the templates and tests read are owned by `naming` (derived names)
-   and `context` (names + per-run doc metadata) rather than mirrored as fields. */
-class Mockaccino {
-	private config: any;
-	private uri: any;
-	private naming: any;
-	private context: typeof TemplateContext;
-	public c_functions_strings: string[] = [];
+/* Abstract orchestrator. Owns everything that is independent of *how* the C
+   source is parsed: config-derived doc metadata, naming, the template context,
+   output-path resolution, and the mock()/stub() template methods that render and
+   write the files. Subclasses supply the backend-specific pieces — preprocessing,
+   parsing and the generated strings — by implementing the three protected hooks.
+
+   - RegexMockaccino (regex_mockaccino.ts) is the regex-parser backend used today.
+   - ClangMockaccino (clang_mockaccino.ts) is the clang-based backend (scaffold).
+
+   Subclass constructors do their own preprocessing/parsing *after* super() runs,
+   so the hooks are only ever called from mock()/stub() — never mid-construction. */
+abstract class Mockaccino {
+	protected config: any;
+	protected uri: any;
+	protected naming: any;
+	protected context: typeof TemplateContext;
+	protected renderer: any;
+	protected writer: any;
 	public file_written: string = "";
 
-	private regexParser: typeof RegexParser;
-	private implGenerator: any;
-	private renderer: any;
-	private writer: any;
-
-	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
+	constructor(uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
 		this.uri = uri;
 
-		const ignored_function_names = this.parseIgnoredFunctionNames();
 		const { localTime, copyright } = this.buildDocMetadata();
-		this.c_functions_strings = this.preprocess(content);
-
 		this.naming = new Naming(this.uri.fsPath);
 		this.context = new TemplateContext(this.naming, version, localTime, copyright);
 
 		const output_path = this.resolveOutputPath(workspace_folder);
-
-		const parserConfig: ParserConfig = {
-			skip_functions_with_implicit_return_type: this.config.get('skipFunctionsWithImplicitReturnType'),
-			skip_static_functions: this.config.get('skipStaticFunctions'),
-			skip_extern_functions: this.config.get('skipExternFunctions'),
-			ignored_function_names: ignored_function_names,
-		};
-		this.regexParser = new RegexParser(parserConfig, this.c_functions_strings);
-		this.implGenerator = new ImplGenerator(this.regexParser, this.naming.caps_mock_name, this.naming.caps_stub_name, this.naming.mock_instance_name);
 		this.renderer = new TemplateRenderer(template_path, this.context);
 		this.writer = new FileWriter(output_path, this.naming);
 
 		console.log(`Output path: ${output_path}`);
 	}
 
-	private parseIgnoredFunctionNames(): string[] {
+	/* Backend-specific hooks. Each returns the strings the templates are filled
+	   with, so the base class never needs to know which parser produced them. */
+	protected abstract getMockMethodStrings(): string[];  // MOCK_METHOD(...) header entries
+	protected abstract getMockImplStrings(): string[];    // mock .cc wrapper bodies
+	protected abstract getStubImplStrings(): string[];    // stub .cc bodies
+
+	/* Shared config parsing, available to every backend. */
+	protected parseIgnoredFunctionNames(): string[] {
 		const ignored_function_names_string = this.config.get('ignoredFunctionNames');
 		if (typeof ignored_function_names_string !== "string") {
 			return [];
@@ -85,29 +77,6 @@ class Mockaccino {
 			.join("\n")
 			.replace(/[ \t]+$/gm, "");
 		return { localTime, copyright };
-	}
-
-	private preprocess(content_raw: string): string[] {
-		const additional_preprocessor_directives = this.config.get('additionalPreprocessorDirectives');
-		const lonely_if_active = this.config.get('treatLonelyPreprocIfAsActive');
-
-		console.log(`Add preproc: ${additional_preprocessor_directives}`);
-		let preprocessor = new Preprocessor(`${additional_preprocessor_directives}\n
-			${content_raw}`);
-		preprocessor.removeComments().mergeLineEscapes().removeExternC();
-		if (lonely_if_active) {
-			preprocessor.activateSimpleIfBlocks();
-		}
-		preprocessor.preprocess();
-		preprocessor.input = additional_preprocessor_directives + "\n" + preprocessor.input;
-		preprocessor.preprocess();
-		preprocessor.removePreprocessorDirectives().removeCompoundExpressions().filterByRoundBraces();
-		console.log("preproc:");
-		console.log(preprocessor.get());
-		const c_functions_strings = preprocessor.mergeWhitespace().getExpressions();
-		console.log("fun strings:");
-		console.log(c_functions_strings);
-		return c_functions_strings;
 	}
 
 	private resolveOutputPath(workspace_folder: string): string {
@@ -136,11 +105,9 @@ class Mockaccino {
 			return this.notAFileResult();
 		}
 
-		const mock_strings_list = this.regexParser.getFunctionStrings((fn: FunctionInfo) =>
-			`\tMOCK_METHOD(${fn.returnType}, ${fn.name}, (${fn.arguments}));`, RegexParserToolbox.removeArgumentName_ProcessArguments
-		);
+		const mock_strings_list = this.getMockMethodStrings();
 		const mock_strings = mock_strings_list.join("\n");
-		const impl_strings = this.implGenerator.getMockImplStrings().join("\n");
+		const impl_strings = this.getMockImplStrings().join("\n");
 		console.log("mock strings:");
 		console.log(mock_strings);
 
@@ -170,7 +137,7 @@ class Mockaccino {
 			return this.notAFileResult();
 		}
 
-		const stub_strings_list = this.implGenerator.getStubImplStrings();
+		const stub_strings_list = this.getStubImplStrings();
 		const stub_strings = stub_strings_list.join("\n");
 		console.log("stub strings:");
 		console.log(stub_strings);

@@ -3,9 +3,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-// Orchestrator module. Now requireable from compiled JS because its internal
-// requires were changed from "./preprocessor.ts" to "./preprocessor" (etc).
-const Mockaccino = require('../mockaccino');
+// Regex-parser backend (concrete subclass of the abstract Mockaccino base).
+// Requireable from compiled JS because its internal requires are extensionless.
+const RegexMockaccino = require('../regex_mockaccino');
 
 // Real template files shipped with the extension: out/test -> repo root.
 const TEMPLATES = path.join(__dirname, '..', '..', 'templates');
@@ -59,7 +59,7 @@ suite('Mockaccino', () => {
 
 	suite('name derivation', () => {
 		test('derives names from the input file path', () => {
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				'int foo(void);', makeUri('/proj/widget.c'), makeConfig(), '1.0.0', '', TEMPLATES
 			);
 			assert.strictEqual(m.naming.name, 'widget');
@@ -72,7 +72,7 @@ suite('Mockaccino', () => {
 		});
 
 		test('parses the function declarations out of the input body', () => {
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				'int foo(int a) {\n  return a;\n}\nvoid bar(void) {\n}\n',
 				makeUri('/proj/widget.c'), makeConfig(), '1.0.0', '', TEMPLATES
 			);
@@ -83,7 +83,7 @@ suite('Mockaccino', () => {
 	suite('mock generation', () => {
 		test('writes a header and source with MOCK_METHOD entries', () => {
 			const content = 'int foo(int a) {\n  return a;\n}\nvoid bar(void) {\n}\n';
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				content, makeUri(path.join(tmp, 'foo.c')),
 				makeConfig({ outputPath: tmp }), '1.2.3', '', TEMPLATES
 			);
@@ -105,7 +105,7 @@ suite('Mockaccino', () => {
 	suite('stub generation', () => {
 		test('writes a stub source that prints info and returns zero values', () => {
 			const content = 'int foo(int a) {\n  return a;\n}\nvoid bar(void) {\n}\n';
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				content, makeUri(path.join(tmp, 'foo.c')),
 				makeConfig({ outputPath: tmp }), '1.2.3', '', TEMPLATES
 			);
@@ -122,7 +122,7 @@ suite('Mockaccino', () => {
 
 	suite('guards', () => {
 		test('skips double mocking when the file name already ends with _mock', () => {
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				'int foo(void);', makeUri(path.join(tmp, 'foo_mock.c')),
 				makeConfig({ outputPath: tmp, disableDoubleMocking: true }), '1', '', TEMPLATES
 			);
@@ -130,7 +130,7 @@ suite('Mockaccino', () => {
 		});
 
 		test('returns an error for a non-file uri scheme', () => {
-			const m = new Mockaccino(
+			const m = new RegexMockaccino(
 				'int foo(void);', makeUri(path.join(tmp, 'foo.c'), 'untitled'),
 				makeConfig({ outputPath: tmp }), '1', '', TEMPLATES
 			);

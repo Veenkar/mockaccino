@@ -19,7 +19,7 @@ npm run test:unit      # fast: compile + run pure-module unit tests via plain mo
 ```
 
 Two test paths:
-- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js` and `acceptance.test.js`. Covers `preprocessor`, `regex_parser`, `interpolator`, and `mockaccino` (the orchestrator, driven against the real templates with `config`/`uri` mocked and output sent to a temp dir) without downloading/launching VS Code. Use this for the fast refactor loop.
+- **`npm run test:unit`** — compiles to `out/` then runs mocha (TDD UI) over `out/test/**/*.test.js`, excluding `extension.test.js` and `acceptance.test.js`. Covers `preprocessor`, `regex_parser`, `interpolator`, and `regex_mockaccino` (the concrete regex backend / orchestrator, driven against the real templates with `config`/`uri` mocked and output sent to a temp dir) without downloading/launching VS Code. Use this for the fast refactor loop.
 - **`npm run test`** — launches a headless Electron VS Code; required for tests that import the `vscode` API: `extension.test.ts` and the **acceptance tests** (`acceptance.test.ts`).
 
 ### Acceptance tests (`src/test/acceptance.test.ts`)
@@ -51,32 +51,44 @@ To publish a new `.vsix`: `npx vsce package` (requires `vsce` globally or via np
 
 ### Processing pipeline (on each command invocation)
 
+The abstract `Mockaccino` base (mockaccino.ts) owns the backend-independent
+half (doc metadata, naming, template context, output path, and the
+`mock()`/`stub()` template methods that render + write). The backend-specific
+half — preprocessing, parsing, and the three string-generation hooks
+(`getMockMethodStrings`, `getMockImplStrings`, `getStubImplStrings`) — lives in a
+concrete subclass. `RegexMockaccino` (regex_mockaccino.ts) is the only wired
+backend; `ClangMockaccino` (clang_mockaccino.ts) is a scaffold.
+
 ```
 Active editor text
-  → Preprocessor         (preprocessor.ts)
-      removeComments, mergeLineEscapes, removeExternC
-      activateSimpleIfBlocks (optional, config-gated)
-      preprocess()  ← evaluates #define/#ifdef/#if/#elif/#else/#endif
-      removePreprocessorDirectives, removeCompoundExpressions (strips function bodies)
-      filterByRoundBraces  ← keeps only semicolon-delimited expressions that have ()
-  → getExpressions()     → string[] of candidate function declarations
-  → RegexParser          (regex_parser.ts)
-      parseFunctionDeclaration() per expression  → FunctionInfo[]
-      filter by static/extern/ignored names/dedup
-      getFunctionStrings(stringifyFn, processArgsFn) → string[]
-  → Interpolator         (interpolator.ts)
-      fills template files using JS template literal eval
-  → fs.writeFileSync     → output .h / .cc files
+  → RegexMockaccino (regex_mockaccino.ts)   ← concrete backend
+    → Preprocessor         (preprocessor.ts)
+        removeComments, mergeLineEscapes, removeExternC
+        activateSimpleIfBlocks (optional, config-gated)
+        preprocess()  ← evaluates #define/#ifdef/#if/#elif/#else/#endif
+        removePreprocessorDirectives, removeCompoundExpressions (strips function bodies)
+        filterByRoundBraces  ← keeps only semicolon-delimited expressions that have ()
+    → getExpressions()     → string[] of candidate function declarations
+    → RegexParser          (regex_parser.ts)
+        parseFunctionDeclaration() per expression  → FunctionInfo[]
+        filter by static/extern/ignored names/dedup
+        getFunctionStrings(stringifyFn, processArgsFn) → string[]
+  → Mockaccino.mock()/stub()  (mockaccino.ts)  ← shared, calls the backend hooks
+    → Interpolator         (interpolator.ts)
+        fills template files using JS template literal eval
+    → fs.writeFileSync     → output .h / .cc files
 ```
 
 ### Key source files
 
-- **[src/extension.ts](src/extension.ts)** — VS Code entry point; registers `mockaccino.mockCurrentFile` and `mockaccino.stubCurrentFile` commands; constructs `Mockaccino` and calls `.mock()` / `.stub()`.
-- **[src/mockaccino.ts](src/mockaccino.ts)** — Core orchestrator. Constructor runs the full preprocessing pipeline. `mock()` / `stub()` call `RegexParser.getFunctionStrings()` with different stringify callbacks, then write via template.
+- **[src/extension.ts](src/extension.ts)** — VS Code entry point; registers `mockaccino.mockCurrentFile` and `mockaccino.stubCurrentFile` commands; constructs `RegexMockaccino` and calls `.mock()` / `.stub()`.
+- **[src/mockaccino.ts](src/mockaccino.ts)** — Abstract orchestrator base. Owns the backend-independent pipeline (doc metadata, naming, `TemplateContext`, output-path resolution) and the `mock()` / `stub()` template methods that render via template and write. Declares three protected abstract hooks the backend implements: `getMockMethodStrings()`, `getMockImplStrings()`, `getStubImplStrings()`. Subclasses do their own preprocessing/parsing *after* `super()`, so the hooks only fire from `mock()`/`stub()`, never mid-construction.
+- **[src/regex_mockaccino.ts](src/regex_mockaccino.ts)** — Concrete regex-parser backend (the behaviour used today). Constructor preprocesses via `Preprocessor` and builds `RegexParser` + `ImplGenerator`; the hooks delegate to them. Exposes `c_functions_strings`.
+- **[src/clang_mockaccino.ts](src/clang_mockaccino.ts)** — Concrete clang backend **scaffold** (not wired into `extension.ts`). Gathers include directories from the `mockaccino.includeDirectories` setting; the generation hooks throw `not yet implemented`. The plan is for clang to do its own include-resolving preprocessing/parsing and feed the same base render/write path.
 - **[src/preprocessor.ts](src/preprocessor.ts)** — Self-contained C preprocessor. Fluent API (methods return `this`). `preprocess()` evaluates macro expansion and conditionals using `Function("use strict"; return (expr))()`.
 - **[src/regex_parser.ts](src/regex_parser.ts)** — `RegexParser` calls `RegexParserToolbox.parseFunctionDeclaration()` per expression. `RegexParserToolbox` has three argument-processing modes: `defaultProcessArguments` (add names to unnamed args), `removeArgumentName_ProcessArguments` (for mock header MOCK_METHOD), `extractArgumentName_ProcessArguments` (for call forwarding inside .cc).
 - **[src/interpolator.ts](src/interpolator.ts)** — Wraps a JS template literal evaluation. Templates use `${instance.fieldName}` and `${variableName}` syntax; backslashes in the template are escaped before eval.
-- **[templates/](templates/)** — Three template files (`mock_header_template.h`, `mock_src_template.cc`, `stub_src_template.cc`). These are real files read at runtime (not bundled as strings); the path is resolved via `context.asAbsolutePath('templates')`. Template variables come from `Mockaccino` instance fields and local variables passed to `Interpolator`.
+- **[templates/](templates/)** — Three template files (`mock_header_template.h`, `mock_src_template.cc`, `stub_src_template.cc`). These are real files read at runtime (not bundled as strings); the path is resolved via `context.asAbsolutePath('templates')`. Template variables come from the `TemplateContext` object (passed to the renderer as `instance`) and local variables passed to `Interpolator`.
 
 ### Mock vs Stub output
 
