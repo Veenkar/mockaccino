@@ -84,18 +84,27 @@ console.log('[integration] 2/5 Generating mocks with Mockaccino...');
 	console.log = () => {};
 	console.warn = () => {};
 	try {
+		const restore = () => {
+			console.log = log;
+			console.warn = warn;
+		};
 		for (const header of ['display.h', 'rng.h']) {
 			const src = path.join(srcDir, header);
 			const content = fs.readFileSync(src, 'utf8');
 			const uri = { fsPath: src, scheme: 'file' };
-			const mock = new Mockaccino(content, uri, makeConfig(genDir), '0.0.0-test', '', templatesDir);
-			const result = mock.mock();
-			if (result.result !== 0) {
-				console.log = log;
-				console.warn = warn;
-				fail(`mock generation for ${header} returned ${result.result}: ${result.message}`);
+			// One instance per header is reused for both outputs (parsing happens once).
+			const generator = new Mockaccino(content, uri, makeConfig(genDir), '0.0.0-test', '', templatesDir);
+			const mockResult = generator.mock();
+			if (mockResult.result !== 0) {
+				restore();
+				fail(`mock generation for ${header} returned ${mockResult.result}: ${mockResult.message}`);
 			}
-			log(`  ${header} -> ${result.mock_count} mock(s)`);
+			const stubResult = generator.stub();
+			if (stubResult.result !== 0) {
+				restore();
+				fail(`stub generation for ${header} returned ${stubResult.result}: ${stubResult.message}`);
+			}
+			log(`  ${header} -> ${mockResult.mock_count} mock(s), ${stubResult.mock_count} stub(s)`);
 		}
 	} finally {
 		console.log = log;

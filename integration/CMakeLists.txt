@@ -11,7 +11,7 @@ set(GEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated)
 
 # The mocks are produced by Mockaccino before CMake runs (see run.js). Fail
 # early with a clear message if generation was skipped.
-foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc)
+foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc display_stub.cc rng_stub.cc)
     if(NOT EXISTS ${GEN_DIR}/${f})
         message(FATAL_ERROR
             "Generated mock '${f}' not found in ${GEN_DIR}.\n"
@@ -52,5 +52,18 @@ add_executable(unit_tests
 target_include_directories(unit_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
 target_link_libraries(unit_tests PRIVATE gmock gmock_main)
 
+# --- Stub tests (generated *_stub.cc; no gmock) -------------------------------
+# Stubs replace the dependency, so they cannot be linked alongside the mocks for
+# the same module — hence a separate executable. These prove the stub output
+# compiles, links, and returns the documented safe defaults.
+add_executable(stub_tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_stub.cpp
+    ${GEN_DIR}/display_stub.cc
+    ${GEN_DIR}/rng_stub.cc
+)
+target_include_directories(stub_tests PRIVATE ${SRC_DIR} ${GEN_DIR})
+target_link_libraries(stub_tests PRIVATE gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+gtest_discover_tests(stub_tests)

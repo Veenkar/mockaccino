@@ -15,13 +15,14 @@ node integration/run.js          (or: npm run test:integration)
 ```
 
 1. Compiles the extension (`tsc`) so the `Mockaccino` orchestrator is available.
-2. Runs Mockaccino on the dependency headers and writes gmock mocks to
+2. Runs Mockaccino on the dependency headers and writes both mocks and stubs to
    `integration/generated/`:
-   - `display.h` → `display_mock.h` / `display_mock.cc`
-   - `rng.h`     → `rng_mock.h` / `rng_mock.cc`
+   - `display.h` → `display_mock.h` / `display_mock.cc` / `display_stub.cc`
+   - `rng.h`     → `rng_mock.h` / `rng_mock.cc` / `rng_stub.cc`
 3. Configures + builds the CMake project with **clang** (GoogleTest is pulled
    via `FetchContent`, so the first run needs network access).
-4. Runs the gmock unit tests via `ctest`.
+4. Runs the gmock unit tests (`unit_tests`) and the stub tests (`stub_tests`)
+   via `ctest`.
 5. Runs the real `game_of_life` binary for a few generations.
 
 If clang / cmake / ninja (or network for the GoogleTest download) is missing,
@@ -49,3 +50,14 @@ linkage, delegating to a gmock singleton. The `unit_tests` target links those
 instead of the real `display.c` / `rng.c`, so the real `board.c` / `engine.c`
 call straight into the mocks. `test_engine.cpp` then sets `EXPECT_CALL`
 expectations; `test_board.cpp` tests the pure rules with no mocks.
+
+### Stubs vs mocks
+
+A **stub** replaces a dependency you simply don't want to run: each generated
+`*_stub.cc` defines the same `display_*` / `rng_*` symbols but the bodies just
+print an info line and return a safe default (`static_cast<T>(0)`, `nullptr` for
+pointers, nothing for `void`). Because a stub and a mock both define the same
+symbols, they can't share a binary — so `stub_tests` is a separate executable
+(plain gtest, no gmock). `test_stub.cpp` calls the stubbed functions and asserts
+they link and return those defaults. This complements the acceptance suite,
+which only checks the generated stub text against golden files.
