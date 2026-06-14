@@ -2,6 +2,7 @@ var Mockaccino = require("./mockaccino");
 var ClangParser = require("./clang_parser");
 var FunctionStringifier = require("./function_stringifier");
 var IncludePaths = require("./include_paths");
+var StructuredHelpers = require("./structured_helpers");
 
 
 /* Clang-based backend. Drives a real clang (`-ast-dump=json`) so includes and
@@ -51,24 +52,24 @@ class ClangMockaccino extends Mockaccino {
 
 	protected getMockMethodStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
 	protected getMockImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
 	protected getStubImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
-	/* Parse once, then apply the same config-driven filters the regex backend
-	   does (skip static/extern, drop ignored names, dedup by name). */
+	/* Parse once, then apply the same config-driven filters every structured
+	   backend shares (skip static/extern, drop ignored names, dedup by name). */
 	private getFunctions(): any[] {
 		if (this.functions !== undefined) {
 			return this.functions;
@@ -76,43 +77,14 @@ class ClangMockaccino extends Mockaccino {
 		const parsed = this.parser.parse(this.content, this.fsPath);
 		this.clangDiagnostics = parsed.diagnostics || '';
 		this.clangHadErrors = parsed.status !== 0;
-		let fns = parsed.functions;
 
-		if (this.config.get('skipStaticFunctions')) {
-			fns = fns.filter((fn: any) => !fn.is_static);
-		}
-		if (this.config.get('skipExternFunctions')) {
-			fns = fns.filter((fn: any) => !fn.is_extern);
-		}
-		const ignored = this.parseIgnoredFunctionNames();
-		if (ignored.length > 0) {
-			fns = fns.filter((fn: any) => !ignored.includes(fn.name));
-		}
-		const seen = new Set<string>();
-		fns = fns.filter((fn: any) => (seen.has(fn.name) ? false : (seen.add(fn.name), true)));
-
+		const fns = StructuredHelpers.filterFunctions(parsed.functions, {
+			skipStatic: this.config.get('skipStaticFunctions'),
+			skipExtern: this.config.get('skipExternFunctions'),
+			ignored: this.parseIgnoredFunctionNames(),
+		});
 		this.functions = fns;
 		return fns;
-	}
-
-	/* The three argument projections, derived from the structured params. Unnamed
-	   params get a synthesised name so the signature and forwarding call stay
-	   valid C. A trailing `...` is added to the types/signature for variadics, but
-	   not to the names (a `...` can't be forwarded by name). */
-	private projectArgs(fn: any): ProjectedArgs {
-		const synth = (p: any, i: number) => p.name || `arg${i + 1}`;
-		const types = fn.params.map((p: any) => p.type);
-		const signature = fn.params.map((p: any, i: number) => `${p.type} ${synth(p, i)}`);
-		const names = fn.params.map((p: any, i: number) => synth(p, i));
-		if (fn.is_variadic) {
-			types.push("...");
-			signature.push("...");
-		}
-		return {
-			types: types.join(", "),
-			signature: signature.join(", "),
-			names: names.join(", "),
-		};
 	}
 
 	/* -I for project includes, -isystem for system header paths, plus any verbatim

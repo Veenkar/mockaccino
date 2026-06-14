@@ -114,6 +114,30 @@
           },
           "default": [],
           "description": "Extra arguments passed verbatim to clang (e.g. -nostdinc, -resource-dir=..., -target=..., -std=c11). Escape hatch for controlling the header search and target."
+        },
+        "mockaccino.ai.inputMode": {
+          "type": "string",
+          "enum": [
+            "fullFile",
+            "declarations"
+          ],
+          "default": "fullFile",
+          "description": "What the AI parser backend feeds the model: 'fullFile' sends the whole source (the model resolves types/context); 'declarations' sends only the candidate function-declaration strings the regex preprocessor extracts (cheaper, mirrors the regex backend)."
+        },
+        "mockaccino.ai.preferredModelSource": {
+          "type": "string",
+          "enum": [
+            "sampling",
+            "vscodeLm",
+            "claudeCli"
+          ],
+          "default": "sampling",
+          "description": "Preferred model source for the AI parser backend. 'sampling' uses the calling MCP client's model (Copilot supports it; Claude Code does not); 'vscodeLm' uses the editor's model (Copilot); 'claudeCli' shells out to the 'claude' CLI. On failure it falls back to the other available sources, and the method actually used is reported."
+        },
+        "mockaccino.ai.claudePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the 'claude' CLI used by the AI parser backend's 'claudeCli' model source. If empty, 'claude' is looked up on PATH."
         }
       }
     }
