@@ -33,10 +33,10 @@ The **clang backend** covers the other half: when your header *is* clean and com
 1. Install **Mockaccino** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino).
 2. Open a C source or header file.
 3. Open the Command Palette (`Ctrl/Cmd+Shift+P`) and run one of:
-   - **Mockaccino: mock current file (regex)**
-   - **Mockaccino: stub current file (regex)**
-   - **Mockaccino: mock current file (clang)**
-   - **Mockaccino: stub current file (clang)**
+   - **Mockaccino: mock current file** — regex backend (default)
+   - **Mockaccino: stub current file** — regex backend (default)
+   - **Mockaccino: mock current file (clang)** — clang backend
+   - **Mockaccino: stub current file (clang)** — clang backend
 4. The generated files appear next to your input (or in `mockaccino.outputPath`), with `_mock` / `_stub` appended.
 
 <!-- Maintainer note: a short header-in → mock-out demo GIF would shine here. -->
@@ -153,6 +153,8 @@ All settings live under `mockaccino.*` in VS Code settings.
 
 - **Regex backend** — the file's preprocessor directives (and any you add in settings) are evaluated, comments and function bodies are stripped, and the remaining function declarations are matched with regular expressions. No include is read and no AST is built, so it needs no knowledge of your type names and tolerates unusual C dialects. The trade-off: very unusual declarators may need a helper macro definition (or the clang backend).
 - **Clang backend** — the source is handed to `clang -ast-dump=json` (fed on stdin, so unsaved edits and `#include "sibling.h"` both work). Mockaccino reads the resulting AST and mocks only the functions **declared in the opened file** — includes are parsed for type resolution but not mocked.
+
+clang's diagnostics (and any generation errors) are written to the **“Mockaccino” output channel** (the Output panel, View → Output → *Mockaccino*). If clang reports errors, you'll get a warning that the generated mock may be incomplete and the output tab opens with the details.
 
 ## Requirements
 

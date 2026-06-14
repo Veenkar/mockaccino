@@ -11,6 +11,11 @@ var IncludePaths = require("./include_paths");
 
 type Operation = 'mock' | 'stub';
 
+// Mockaccino's own tab in the Output panel — generator progress and, crucially,
+// clang's parse diagnostics are logged here so the user can read the full text
+// (an error toast is truncated and transient). Created in activate().
+let output: vscode.OutputChannel;
+
 // Include directories from the VS Code C/C++ configuration, for the clang
 // backend. Two sources: the `C_Cpp.default.includePath` setting (read via the
 // config API, JSONC-aware) and the includePath arrays in c_cpp_properties.json
@@ -62,18 +67,43 @@ function runGeneration(context: vscode.ExtensionContext, BackendClass: any, oper
 	// config + a file, so skip it for the regex backend.
 	const externalIncludeDirs = BackendClass === ClangMockaccino ? gatherClangIncludeDirs(wf) : [];
 
+	output.appendLine(`[${new Date().toISOString()}] ${operation} ${uri.fsPath}`);
+
 	try {
 		const mockaccino = new BackendClass(content, uri, config, version, wf, template_path, externalIncludeDirs);
 		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
+
+		// Surface clang's parse diagnostics (warnings/errors) in the output tab.
+		const diagnostics: string = typeof mockaccino.clangDiagnostics === 'string' ? mockaccino.clangDiagnostics.trim() : '';
+		if (diagnostics.length > 0) {
+			output.appendLine('clang diagnostics:');
+			output.appendLine(diagnostics);
+		}
+
+		if (mockaccino.clangHadErrors) {
+			// clang reported errors; the AST may be partial, so some functions can
+			// be missing or wrong. Point the user at the full log.
+			output.show(true);
+			vscode.window.showWarningMessage(
+				'Mockaccino: clang reported errors while parsing — the generated mock may be incomplete. See the "Mockaccino" output.'
+			);
+			return;
+		}
+
 		if (result.result === 0) {
+			output.appendLine(result.message);
 			vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
 		} else if (result.result === 1) {
 			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
 		} else {
+			output.appendLine(`ERROR: ${result.message}`);
 			vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
 		}
 	} catch (err: any) {
-		vscode.window.showErrorMessage(`Mockaccino: ${err && err.message ? err.message : err}`);
+		const message = err && err.message ? err.message : String(err);
+		output.appendLine(`ERROR: ${message}`);
+		output.show(true);
+		vscode.window.showErrorMessage(`Mockaccino: generation failed — see the "Mockaccino" output. (${message.split('\n')[0]})`);
 	}
 }
 
@@ -84,6 +114,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Mockaccino actiaved!');
+
+	output = vscode.window.createOutputChannel('Mockaccino');
+	context.subscriptions.push(output);
 
 	// Each command in package.json maps to a (backend, operation) pair.
 	const commands: [string, any, Operation][] = [

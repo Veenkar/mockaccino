@@ -14,6 +14,16 @@ interface ClangFunction {
 	is_variadic: boolean;
 }
 
+/* Parse outcome: the functions found plus clang's own diagnostics. With
+   -ferror-limit=0 clang still emits an AST for the parts it could parse even when
+   there are errors, so `diagnostics` (stderr) and a non-zero `status` let the
+   caller warn the user that the result may be incomplete. */
+interface ClangParseResult {
+	functions: ClangFunction[];
+	diagnostics: string;
+	status: number;
+}
+
 /* Runs `clang -ast-dump=json` over the source (fed on stdin so unsaved editor
    content is honoured and `#include "sibling.h"` resolves against the file's own
    directory) and pulls out the function declarations physically located in the
@@ -27,7 +37,7 @@ class ClangParser {
 
 	/* fsPath is used only to set the working directory for include resolution and
 	   for diagnostics; the actual bytes come from `content` via stdin. */
-	parse(content: string, fsPath: string): ClangFunction[] {
+	parse(content: string, fsPath: string): ClangParseResult {
 		const args = [
 			'-Xclang', '-ast-dump=json',
 			'-fsyntax-only',
@@ -45,8 +55,11 @@ class ClangParser {
 		if (res.error) {
 			throw new Error(`Failed to run clang at '${this.clangPath}': ${res.error.message}`);
 		}
+		const diagnostics: string = res.stderr || '';
 		if (!res.stdout || res.stdout.trim().length === 0) {
-			throw new Error(`clang produced no AST output (exit ${res.status}). Stderr:\n${res.stderr || '(empty)'}`);
+			// No AST at all — a fatal parse (e.g. an unresolved include) or a bad
+			// clang. Surface clang's own diagnostics in the error.
+			throw new Error(`clang produced no AST output (exit ${res.status}).\n${diagnostics || '(no diagnostics)'}`);
 		}
 		let ast: any;
 		try {
@@ -54,7 +67,11 @@ class ClangParser {
 		} catch (e: any) {
 			throw new Error(`Could not parse clang JSON AST: ${e.message}`);
 		}
-		return ClangParser.extractTargetFunctions(ast);
+		return {
+			functions: ClangParser.extractTargetFunctions(ast),
+			diagnostics,
+			status: typeof res.status === 'number' ? res.status : 0,
+		};
 	}
 
 	/* Top-level FunctionDecls that belong to the main (stdin) file. clang only

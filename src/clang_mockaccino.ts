@@ -27,6 +27,12 @@ class ClangMockaccino extends Mockaccino {
 	private external_include_dirs: string[];
 	private functions: any[] | undefined;
 
+	// clang's diagnostics from the last parse, exposed so the extension can log
+	// them to its output channel. `clangHadErrors` means clang exited non-zero
+	// (errors present) even though it may still have emitted a partial AST.
+	public clangDiagnostics: string = '';
+	public clangHadErrors: boolean = false;
+
 	/* external_include_dirs are include directories the caller gathered from the
 	   VS Code C/C++ configuration (extension.ts owns that, since it needs the
 	   vscode API). They are merged *after* mockaccino.includeDirectories. */
@@ -67,7 +73,10 @@ class ClangMockaccino extends Mockaccino {
 		if (this.functions !== undefined) {
 			return this.functions;
 		}
-		let fns = this.parser.parse(this.content, this.fsPath);
+		const parsed = this.parser.parse(this.content, this.fsPath);
+		this.clangDiagnostics = parsed.diagnostics || '';
+		this.clangHadErrors = parsed.status !== 0;
+		let fns = parsed.functions;
 
 		if (this.config.get('skipStaticFunctions')) {
 			fns = fns.filter((fn: any) => !fn.is_static);

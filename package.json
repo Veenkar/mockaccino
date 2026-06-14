@@ -20,11 +20,11 @@
     "commands": [
       {
         "command": "mockaccino.mockCurrentFile",
-        "title": "Mockaccino: mock current file (regex)."
+        "title": "Mockaccino: mock current file."
       },
       {
         "command": "mockaccino.stubCurrentFile",
-        "title": "Mockaccino: stub current file (regex)."
+        "title": "Mockaccino: stub current file."
       },
       {
         "command": "mockaccino.mockCurrentFileClang",
