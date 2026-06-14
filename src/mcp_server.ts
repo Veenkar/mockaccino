@@ -197,24 +197,47 @@ export async function startMcpServer(context: vscode.ExtensionContext): Promise<
 		}
 	}
 
+	// Port selection: the configured port if set, else the one we used last time
+	// (persisted), else an ephemeral one. Reusing a stable port keeps the URL valid
+	// across reloads — VS Code caches the server URL, so an ephemeral port that
+	// changes every start leaves the cached URL pointing at a dead server
+	// (ECONNREFUSED). If the chosen port is taken, fall back to ephemeral.
 	const configuredPort = Number(vscode.workspace.getConfiguration('mockaccino').get('mcp.port')) || 0;
-	await new Promise<void>((resolve, reject) => {
+	const persistedPort = configuredPort > 0 ? configuredPort : Number(context.globalState.get('mockaccino.mcpPort')) || 0;
+
+	const listenOn = (p: number) => new Promise<void>((resolve, reject) => {
 		const onError = (err: any) => reject(err);
 		httpServer.once('error', onError);
-		httpServer.listen(configuredPort, '127.0.0.1', () => {
+		httpServer.listen(p, '127.0.0.1', () => {
 			httpServer.removeListener('error', onError);
 			resolve();
 		});
 	});
+	try {
+		await listenOn(persistedPort);
+	} catch (err) {
+		if (persistedPort === 0) {
+			throw err;
+		}
+		await listenOn(0); // the remembered/configured port was taken — take any free one
+	}
+
 	const address = httpServer.address();
 	const port = address && typeof address === 'object' ? address.port : 0;
+	void context.globalState.update('mockaccino.mcpPort', port); // remember for next start
 	const url = `http://127.0.0.1:${port}/mcp`;
 
+	// Fire onDidChangeMcpServerDefinitions so VS Code re-queries the provider and
+	// drops any stale cached URL from a previous session.
+	const didChange = new vscode.EventEmitter<void>();
 	const providerReg = vscode.lm.registerMcpServerDefinitionProvider('mockaccino-mcp', {
+		onDidChangeMcpServerDefinitions: didChange.event,
 		provideMcpServerDefinitions: () => [new vscode.McpHttpServerDefinition('Mockaccino', vscode.Uri.parse(url))],
 	});
+	didChange.fire();
 
 	const dispose = () => {
+		didChange.dispose();
 		providerReg.dispose();
 		for (const id of Object.keys(transports)) {
 			try { transports[id].close(); } catch { /* ignore */ }
