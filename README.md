@@ -154,7 +154,7 @@ All settings live under `mockaccino.*` in VS Code settings.
 - **Regex backend** — the file's preprocessor directives (and any you add in settings) are evaluated, comments and function bodies are stripped, and the remaining function declarations are matched with regular expressions. No include is read and no AST is built, so it needs no knowledge of your type names and tolerates unusual C dialects. The trade-off: very unusual declarators may need a helper macro definition (or the clang backend).
 - **Clang backend** — the source is handed to `clang -ast-dump=json` (fed on stdin, so unsaved edits and `#include "sibling.h"` both work). Mockaccino reads the resulting AST and mocks only the functions **declared in the opened file** — includes are parsed for type resolution but not mocked.
 
-clang's diagnostics (and any generation errors) are written to the **“Mockaccino” output channel** (the Output panel, View → Output → *Mockaccino*). If clang reports errors, you'll get a warning that the generated mock may be incomplete and the output tab opens with the details.
+clang's diagnostics (and any generation errors) are logged to a **“Mockaccino” tab in the Terminal panel** *and* to the matching **Output channel** (View → Output → *Mockaccino*). If clang reports errors, you'll get a warning that the generated mock may be incomplete and the log is brought into view with the details.
 
 ## Requirements
 

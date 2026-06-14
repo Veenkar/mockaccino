@@ -11,10 +11,47 @@ var IncludePaths = require("./include_paths");
 
 type Operation = 'mock' | 'stub';
 
-// Mockaccino's own tab in the Output panel — generator progress and, crucially,
-// clang's parse diagnostics are logged here so the user can read the full text
-// (an error toast is truncated and transient). Created in activate().
+// Mockaccino logs generator progress and (crucially) clang's parse diagnostics
+// to two places the user can read in full — an error toast is truncated and
+// transient. Both are created lazily/on activate:
+//   - an Output-panel channel, and
+//   - a "Mockaccino" tab in the Terminal panel (a pseudoterminal), which is more
+//     discoverable than the Output dropdown.
 let output: vscode.OutputChannel;
+let terminal: vscode.Terminal | undefined;
+let terminalWriter: vscode.EventEmitter<string> | undefined;
+let terminalBuffer = '';
+
+// Create the Mockaccino pseudoterminal on demand. Writes are buffered so the log
+// history is (re)printed when the tab is first opened or reopened.
+function ensureTerminal(): void {
+	if (terminal) {
+		return;
+	}
+	terminalWriter = new vscode.EventEmitter<string>();
+	const pty: vscode.Pseudoterminal = {
+		onDidWrite: terminalWriter.event,
+		open: () => { if (terminalBuffer) { terminalWriter!.fire(terminalBuffer); } },
+		close: () => { /* nothing to clean up */ },
+	};
+	terminal = vscode.window.createTerminal({ name: 'Mockaccino', pty });
+}
+
+// Append a line to both sinks. Terminals need CRLF.
+function logLine(line: string): void {
+	output.appendLine(line);
+	ensureTerminal();
+	const data = line.replace(/\r?\n/g, '\r\n') + '\r\n';
+	terminalBuffer += data;
+	terminalWriter!.fire(data);
+}
+
+// Bring the log into view (terminal tab + output channel), preserving editor focus.
+function revealLog(): void {
+	ensureTerminal();
+	terminal!.show(true);
+	output.show(true);
+}
 
 // Include directories from the VS Code C/C++ configuration, for the clang
 // backend. Two sources: the `C_Cpp.default.includePath` setting (read via the
@@ -67,43 +104,44 @@ function runGeneration(context: vscode.ExtensionContext, BackendClass: any, oper
 	// config + a file, so skip it for the regex backend.
 	const externalIncludeDirs = BackendClass === ClangMockaccino ? gatherClangIncludeDirs(wf) : [];
 
-	output.appendLine(`[${new Date().toISOString()}] ${operation} ${uri.fsPath}`);
+	logLine(`[${new Date().toISOString()}] ${operation} ${uri.fsPath}`);
 
 	try {
 		const mockaccino = new BackendClass(content, uri, config, version, wf, template_path, externalIncludeDirs);
 		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
 
-		// Surface clang's parse diagnostics (warnings/errors) in the output tab.
+		// Surface clang's parse diagnostics (warnings/errors) in the log.
 		const diagnostics: string = typeof mockaccino.clangDiagnostics === 'string' ? mockaccino.clangDiagnostics.trim() : '';
 		if (diagnostics.length > 0) {
-			output.appendLine('clang diagnostics:');
-			output.appendLine(diagnostics);
+			logLine('clang diagnostics:');
+			logLine(diagnostics);
 		}
 
 		if (mockaccino.clangHadErrors) {
 			// clang reported errors; the AST may be partial, so some functions can
 			// be missing or wrong. Point the user at the full log.
-			output.show(true);
+			revealLog();
 			vscode.window.showWarningMessage(
-				'Mockaccino: clang reported errors while parsing — the generated mock may be incomplete. See the "Mockaccino" output.'
+				'Mockaccino: clang reported errors while parsing — the generated mock may be incomplete. See the "Mockaccino" terminal/output.'
 			);
 			return;
 		}
 
 		if (result.result === 0) {
-			output.appendLine(result.message);
+			logLine(result.message);
 			vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
 		} else if (result.result === 1) {
+			logLine(result.message);
 			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
 		} else {
-			output.appendLine(`ERROR: ${result.message}`);
+			logLine(`ERROR: ${result.message}`);
 			vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
 		}
 	} catch (err: any) {
 		const message = err && err.message ? err.message : String(err);
-		output.appendLine(`ERROR: ${message}`);
-		output.show(true);
-		vscode.window.showErrorMessage(`Mockaccino: generation failed — see the "Mockaccino" output. (${message.split('\n')[0]})`);
+		logLine(`ERROR: ${message}`);
+		revealLog();
+		vscode.window.showErrorMessage(`Mockaccino: generation failed — see the "Mockaccino" terminal/output. (${message.split('\n')[0]})`);
 	}
 }
 
@@ -117,6 +155,15 @@ export function activate(context: vscode.ExtensionContext) {
 
 	output = vscode.window.createOutputChannel('Mockaccino');
 	context.subscriptions.push(output);
+
+	// If the user closes the Mockaccino terminal, drop the handle so the next log
+	// recreates it (its buffered history is reprinted on open).
+	context.subscriptions.push(vscode.window.onDidCloseTerminal((closed) => {
+		if (closed === terminal) {
+			terminal = undefined;
+			terminalWriter = undefined;
+		}
+	}));
 
 	// Each command in package.json maps to a (backend, operation) pair.
 	const commands: [string, any, Operation][] = [
