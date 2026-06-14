@@ -40,6 +40,28 @@ suite('mcp_tools.stripComments', () => {
 	});
 });
 
+suite('mcp_tools.chainCompletions', () => {
+	const ok = (source: string, value: string) => ({ source, complete: async () => value });
+	const fail = (source: string, msg: string) => ({ source, complete: async () => { throw new Error(msg); } });
+
+	test('uses the first provider that succeeds and records the source', async () => {
+		const chain = McpTools.chainCompletions([ok('sampling', 'A'), ok('claudeCli', 'B')]);
+		assert.strictEqual(await chain.complete('p'), 'A');
+		assert.strictEqual(chain.usedSource(), 'sampling');
+	});
+
+	test('falls back past failing providers', async () => {
+		const chain = McpTools.chainCompletions([fail('sampling', 'no sampling'), ok('claudeCli', 'B')]);
+		assert.strictEqual(await chain.complete('p'), 'B');
+		assert.strictEqual(chain.usedSource(), 'claudeCli');
+	});
+
+	test('throws listing every error when all fail', async () => {
+		const chain = McpTools.chainCompletions([fail('sampling', 'x'), fail('vscodeLm', 'y')]);
+		await assert.rejects(() => chain.complete('p'), /sampling: x[\s\S]*vscodeLm: y/);
+	});
+});
+
 suite('mcp_tools.buildReport', () => {
 	const fakeRead = (p: string) => (p.endsWith('.h') ? '/* hdr */\nclass M {};\n' : '// impl\nvoid f(){}\n');
 

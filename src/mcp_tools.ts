@@ -66,6 +66,30 @@ function buildReport(
 	return lines.join('\n');
 }
 
+/* Try AI model-source providers in order until one succeeds; remember which one
+   answered. Each provider is `{ source, complete }`. Throws (listing every
+   provider's error) only when all fail. Pure — providers are injected. */
+function chainCompletions(providers: { source: string; complete: (prompt: string) => Promise<string> }[]): {
+	complete: (prompt: string) => Promise<string>;
+	usedSource: () => string;
+} {
+	let used = '';
+	const complete = async (prompt: string): Promise<string> => {
+		const errors: string[] = [];
+		for (const provider of providers) {
+			try {
+				const result = await provider.complete(prompt);
+				used = provider.source;
+				return result;
+			} catch (err: any) {
+				errors.push(`${provider.source}: ${err && err.message ? err.message : err}`);
+			}
+		}
+		throw new Error(`all AI model sources failed —\n${errors.join('\n')}`);
+	};
+	return { complete, usedSource: () => used };
+}
+
 if (typeof module === "object") {
-	module.exports = { allowedBackends, stripComments, buildReport };
+	module.exports = { allowedBackends, stripComments, buildReport, chainCompletions };
 }

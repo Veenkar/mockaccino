@@ -41,6 +41,16 @@
       {
         "command": "mockaccino.stubCurrentFileAi",
         "title": "Mockaccino: stub current file (AI)."
+      },
+      {
+        "command": "mockaccino.addMcpServerToClaudeCode",
+        "title": "Mockaccino: add MCP server to Claude Code (.mcp.json)."
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "mockaccino-mcp",
+        "label": "Mockaccino"
       }
     ],
     "configuration": {
@@ -154,6 +164,21 @@
           },
           "default": [],
           "description": "Extra arguments passed to the 'claude' CLI for the 'claudeCli' model source (e.g. --model). The prompt is always sent on stdin with -p."
+        },
+        "mockaccino.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the Mockaccino MCP server so AI clients (Copilot agent mode, Claude Code) can generate mocks/stubs. Copilot discovers it automatically; for Claude Code run the 'add MCP server to Claude Code' command."
+        },
+        "mockaccino.mcp.enableClangBackend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow MCP clients to use the clang parser backend (off by default; regex is always available over MCP)."
+        },
+        "mockaccino.mcp.enableAiBackend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow MCP clients to use the AI parser backend (off by default; regex is always available over MCP)."
         }
       }
     }

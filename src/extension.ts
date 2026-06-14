@@ -2,14 +2,18 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { buildAiComplete } from './ai_providers';
+import { gatherClangIncludeDirs } from './clang_includes';
+import { startMcpServer } from './mcp_server';
 
 // Parser backends. Regex is the original, dependency-free path; clang resolves
 // includes/types via a real compiler (see clang_mockaccino.ts).
 var RegexMockaccino = require("./regex_mockaccino");
 var ClangMockaccino = require("./clang_mockaccino");
 var AiMockaccino = require("./ai_mockaccino");
-var ClaudeCliCompletion = require("./claude_cli");
-var IncludePaths = require("./include_paths");
+
+// Handle on the running MCP server (started on activate when mockaccino.mcp.enabled).
+let mcpServer: { dispose: () => void; url: string } | undefined;
 
 type Operation = 'mock' | 'stub';
 
@@ -53,28 +57,6 @@ function revealLog(): void {
 	ensureTerminal();
 	terminal!.show(true);
 	output.show(true);
-}
-
-// Include directories from the VS Code C/C++ configuration, for the clang
-// backend. Two sources: the `C_Cpp.default.includePath` setting (read via the
-// config API, JSONC-aware) and the includePath arrays in c_cpp_properties.json
-// (parsed directly — that file is not exposed through the config API). The
-// clang backend merges these *after* mockaccino.includeDirectories.
-function gatherClangIncludeDirs(workspaceFolder: string): string[] {
-	const raw: string[] = [];
-
-	const cpp = vscode.workspace.getConfiguration('C_Cpp');
-	const fromSettings = cpp.get<string[]>('default.includePath');
-	if (Array.isArray(fromSettings)) {
-		raw.push(...fromSettings);
-	}
-
-	if (workspaceFolder) {
-		const propsPath = path.join(workspaceFolder, '.vscode', 'c_cpp_properties.json');
-		raw.push(...IncludePaths.fromCCppPropertiesFile(propsPath));
-	}
-
-	return IncludePaths.normalize(raw, workspaceFolder);
 }
 
 // Shared command body: read the active editor + config, construct the chosen
@@ -147,54 +129,10 @@ function runGeneration(context: vscode.ExtensionContext, BackendClass: any, oper
 	}
 }
 
-// AI model-source provider: borrow the editor's model via vscode.lm (in practice
-// Copilot). Throws if no language model is available, so the chain can fall back.
-async function vscodeLmComplete(prompt: string): Promise<string> {
-	const models = await vscode.lm.selectChatModels();
-	if (!models || models.length === 0) {
-		throw new Error('no vscode.lm chat model available (install GitHub Copilot or another language-model provider)');
-	}
-	const messages = [vscode.LanguageModelChatMessage.User(prompt)];
-	const response = await models[0].sendRequest(messages, {}, new vscode.CancellationTokenSource().token);
-	let text = '';
-	for await (const chunk of response.text) {
-		text += chunk;
-	}
-	return text;
-}
-
-// Build the AI `complete` provider for the command-palette path: there is no MCP
-// client here, so `sampling` is not available — try the `claude` CLI and vscode.lm
-// in the user's preferred order, falling back through the rest, and remember which
-// one actually answered.
-function buildAiComplete(config: any): { complete: (prompt: string) => Promise<string>; usedSource: () => string } {
-	const preferred = config.get('ai.preferredModelSource') || 'sampling';
-	const order = preferred === 'vscodeLm' ? ['vscodeLm', 'claudeCli'] : ['claudeCli', 'vscodeLm'];
-	const claude = new ClaudeCliCompletion(config.get('ai.claudePath') || '', config.get('ai.claudeArgs') || []);
-	const providers = order.map((source) => ({
-		source,
-		complete: source === 'claudeCli' ? claude.complete : vscodeLmComplete,
-	}));
-
-	let used = '';
-	const complete = async (prompt: string): Promise<string> => {
-		const errors: string[] = [];
-		for (const provider of providers) {
-			try {
-				const result = await provider.complete(prompt);
-				used = provider.source;
-				return result;
-			} catch (err: any) {
-				errors.push(`${provider.source}: ${err && err.message ? err.message : err}`);
-			}
-		}
-		throw new Error(`all AI model sources failed —\n${errors.join('\n')}`);
-	};
-	return { complete, usedSource: () => used };
-}
-
 // The AI backend is async (the model call) and needs a `complete` provider, so it
-// gets its own command body instead of the shared runGeneration.
+// gets its own command body instead of the shared runGeneration. The provider chain
+// (claude CLI / vscode.lm; the command path has no MCP client, so no sampling) is
+// shared with the MCP server via ai_providers.buildAiComplete.
 async function runAiGeneration(context: vscode.ExtensionContext, operation: Operation) {
 	const config = vscode.workspace.getConfiguration('mockaccino');
 	const editor = vscode.window.activeTextEditor;
@@ -282,9 +220,64 @@ export function activate(context: vscode.ExtensionContext) {
 			runAiGeneration(context, operation)
 		));
 	}
+
+	// Start the MCP server (unless disabled). Guarded so a failure can't break
+	// activation — the rest of the extension keeps working.
+	if (vscode.workspace.getConfiguration('mockaccino').get('mcp.enabled') !== false) {
+		startMcpServer(context)
+			.then((server) => {
+				mcpServer = server;
+				logLine(`MCP server listening at ${server.url} (Copilot discovers it automatically; for Claude Code run "Mockaccino: add MCP server to Claude Code").`);
+			})
+			.catch((err) => logLine(`MCP server failed to start: ${err && err.message ? err.message : err}`));
+	}
+
+	// Auto-write the server entry into the workspace .mcp.json so Claude Code (which
+	// does not discover VS Code-contributed servers) can connect to the same server.
+	context.subscriptions.push(vscode.commands.registerCommand('mockaccino.addMcpServerToClaudeCode', () =>
+		addMcpServerToClaudeCode()
+	));
+}
+
+// Merge a Mockaccino HTTP entry into the workspace .mcp.json (Claude Code's
+// project-scoped MCP config), creating/updating it.
+async function addMcpServerToClaudeCode() {
+	if (!mcpServer) {
+		vscode.window.showWarningMessage('Mockaccino: the MCP server is not running (enable mockaccino.mcp.enabled).');
+		return;
+	}
+	const folders = vscode.workspace.workspaceFolders;
+	if (!folders || folders.length === 0) {
+		vscode.window.showWarningMessage('Mockaccino: open a workspace folder to write .mcp.json.');
+		return;
+	}
+	const file = vscode.Uri.joinPath(folders[0].uri, '.mcp.json');
+	let json: any = { mcpServers: {} };
+	try {
+		const existing = await vscode.workspace.fs.readFile(file);
+		json = JSON.parse(Buffer.from(existing).toString('utf8'));
+		if (!json.mcpServers || typeof json.mcpServers !== 'object') {
+			json.mcpServers = {};
+		}
+	} catch {
+		/* no existing file — start fresh */
+	}
+	json.mcpServers.mockaccino = { type: 'http', url: mcpServer.url };
+	try {
+		await vscode.workspace.fs.writeFile(file, Buffer.from(JSON.stringify(json, null, 2) + '\n', 'utf8'));
+		logLine(`Wrote Mockaccino MCP entry (${mcpServer.url}) to ${file.fsPath}`);
+		vscode.window.showInformationMessage('Mockaccino: added the MCP server to .mcp.json for Claude Code. Reload Claude Code to pick it up.');
+	} catch (err: any) {
+		vscode.window.showErrorMessage(`Mockaccino: could not write .mcp.json — ${err && err.message ? err.message : err}`);
+	}
 }
 
 
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	if (mcpServer) {
+		mcpServer.dispose();
+		mcpServer = undefined;
+	}
+}
