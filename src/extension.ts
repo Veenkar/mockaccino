@@ -7,6 +7,8 @@ import * as path from 'path';
 // includes/types via a real compiler (see clang_mockaccino.ts).
 var RegexMockaccino = require("./regex_mockaccino");
 var ClangMockaccino = require("./clang_mockaccino");
+var AiMockaccino = require("./ai_mockaccino");
+var ClaudeCliCompletion = require("./claude_cli");
 var IncludePaths = require("./include_paths");
 
 type Operation = 'mock' | 'stub';
@@ -145,6 +147,96 @@ function runGeneration(context: vscode.ExtensionContext, BackendClass: any, oper
 	}
 }
 
+// AI model-source provider: borrow the editor's model via vscode.lm (in practice
+// Copilot). Throws if no language model is available, so the chain can fall back.
+async function vscodeLmComplete(prompt: string): Promise<string> {
+	const models = await vscode.lm.selectChatModels();
+	if (!models || models.length === 0) {
+		throw new Error('no vscode.lm chat model available (install GitHub Copilot or another language-model provider)');
+	}
+	const messages = [vscode.LanguageModelChatMessage.User(prompt)];
+	const response = await models[0].sendRequest(messages, {}, new vscode.CancellationTokenSource().token);
+	let text = '';
+	for await (const chunk of response.text) {
+		text += chunk;
+	}
+	return text;
+}
+
+// Build the AI `complete` provider for the command-palette path: there is no MCP
+// client here, so `sampling` is not available — try the `claude` CLI and vscode.lm
+// in the user's preferred order, falling back through the rest, and remember which
+// one actually answered.
+function buildAiComplete(config: any): { complete: (prompt: string) => Promise<string>; usedSource: () => string } {
+	const preferred = config.get('ai.preferredModelSource') || 'sampling';
+	const order = preferred === 'vscodeLm' ? ['vscodeLm', 'claudeCli'] : ['claudeCli', 'vscodeLm'];
+	const claude = new ClaudeCliCompletion(config.get('ai.claudePath') || '', config.get('ai.claudeArgs') || []);
+	const providers = order.map((source) => ({
+		source,
+		complete: source === 'claudeCli' ? claude.complete : vscodeLmComplete,
+	}));
+
+	let used = '';
+	const complete = async (prompt: string): Promise<string> => {
+		const errors: string[] = [];
+		for (const provider of providers) {
+			try {
+				const result = await provider.complete(prompt);
+				used = provider.source;
+				return result;
+			} catch (err: any) {
+				errors.push(`${provider.source}: ${err && err.message ? err.message : err}`);
+			}
+		}
+		throw new Error(`all AI model sources failed —\n${errors.join('\n')}`);
+	};
+	return { complete, usedSource: () => used };
+}
+
+// The AI backend is async (the model call) and needs a `complete` provider, so it
+// gets its own command body instead of the shared runGeneration.
+async function runAiGeneration(context: vscode.ExtensionContext, operation: Operation) {
+	const config = vscode.workspace.getConfiguration('mockaccino');
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showWarningMessage('No active editor found.');
+		return;
+	}
+	const uri = editor.document.uri;
+	const content = editor.document.getText();
+	const version = context.extension.packageJSON.version;
+	let wf = '';
+	if (vscode.workspace.workspaceFolders !== undefined) {
+		wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	const template_path = context.asAbsolutePath(path.join('templates'));
+
+	logLine(`[${new Date().toISOString()}] ${operation} (ai) ${uri.fsPath}`);
+	const ai = buildAiComplete(config);
+	try {
+		const mockaccino = new AiMockaccino(content, uri, config, version, wf, template_path, ai.complete);
+		await mockaccino.prepare();
+		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
+		logLine(`AI model source used: ${ai.usedSource() || '(none)'}`);
+
+		if (result.result === 0) {
+			logLine(result.message);
+			vscode.window.showInformationMessage(`Mockaccino (AI via ${ai.usedSource()}): ${result.message}`);
+		} else if (result.result === 1) {
+			logLine(result.message);
+			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
+		} else {
+			logLine(`ERROR: ${result.message}`);
+			vscode.window.showErrorMessage(`Mockaccino: ${result.message}`);
+		}
+	} catch (err: any) {
+		const message = err && err.message ? err.message : String(err);
+		logLine(`ERROR: ${message}`);
+		revealLog();
+		vscode.window.showErrorMessage(`Mockaccino: AI generation failed — see the "Mockaccino" terminal/output. (${message.split('\n')[0]})`);
+	}
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -178,6 +270,17 @@ export function activate(context: vscode.ExtensionContext) {
 			runGeneration(context, BackendClass, operation)
 		);
 		context.subscriptions.push(disposable);
+	}
+
+	// The AI backend is async with its own command body.
+	const aiCommands: [string, Operation][] = [
+		['mockaccino.mockCurrentFileAi', 'mock'],
+		['mockaccino.stubCurrentFileAi', 'stub'],
+	];
+	for (const [commandId, operation] of aiCommands) {
+		context.subscriptions.push(vscode.commands.registerCommand(commandId, () =>
+			runAiGeneration(context, operation)
+		));
 	}
 }
 
