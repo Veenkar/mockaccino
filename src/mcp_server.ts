@@ -197,7 +197,15 @@ export async function startMcpServer(context: vscode.ExtensionContext): Promise<
 		}
 	}
 
-	await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', () => resolve()));
+	const configuredPort = Number(vscode.workspace.getConfiguration('mockaccino').get('mcp.port')) || 0;
+	await new Promise<void>((resolve, reject) => {
+		const onError = (err: any) => reject(err);
+		httpServer.once('error', onError);
+		httpServer.listen(configuredPort, '127.0.0.1', () => {
+			httpServer.removeListener('error', onError);
+			resolve();
+		});
+	});
 	const address = httpServer.address();
 	const port = address && typeof address === 'object' ? address.port : 0;
 	const url = `http://127.0.0.1:${port}/mcp`;

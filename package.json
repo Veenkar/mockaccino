@@ -14,7 +14,9 @@
   "categories": [
     "Testing"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -169,6 +171,11 @@
           "type": "boolean",
           "default": true,
           "description": "Run the Mockaccino MCP server so AI clients (Copilot agent mode, Claude Code) can generate mocks/stubs. Copilot discovers it automatically; for Claude Code run the 'add MCP server to Claude Code' command."
+        },
+        "mockaccino.mcp.port": {
+          "type": "number",
+          "default": 0,
+          "description": "Localhost TCP port for the MCP server. 0 picks a free port each start (fine for Copilot, which is told the current port). Set a fixed port if you use Claude Code via .mcp.json so the URL stays stable across restarts."
         },
         "mockaccino.mcp.enableClangBackend": {
           "type": "boolean",
