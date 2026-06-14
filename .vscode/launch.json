@@ -17,6 +17,19 @@
 				"${workspaceFolder}/dist/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"//": "Use this to test the AI backend and the MCP server: it leaves other extensions ENABLED so Copilot (vscode.lm + MCP sampling) and the Claude Code extension are available in the dev host.",
+			"name": "Run Extension (other extensions enabled)",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [
+				"${workspaceFolder}/dist/**/*.js"
+			],
+			"preLaunchTask": "${defaultBuildTask}"
 		}
 	]
 }
