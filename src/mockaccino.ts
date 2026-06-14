@@ -30,6 +30,7 @@ abstract class Mockaccino {
 	protected renderer: any;
 	protected writer: any;
 	public file_written: string = "";
+	public files_written: string[] = [];
 
 	constructor(uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
 		this.config = config;
@@ -113,7 +114,8 @@ abstract class Mockaccino {
 
 		const header = this.renderer.renderMockHeader(mock_strings);
 		const src = this.renderer.renderMockSrc(impl_strings);
-		this.file_written = this.writer.writeMock(header, src);
+		this.files_written = this.writer.writeMock(header, src);
+		this.file_written = this.files_written[0];
 
 		if (mock_strings_list.length > 0) {
 			return {
@@ -143,7 +145,8 @@ abstract class Mockaccino {
 		console.log(stub_strings);
 
 		const src = this.renderer.renderStubSrc(stub_strings);
-		this.file_written = this.writer.writeStub(src);
+		this.files_written = this.writer.writeStub(src);
+		this.file_written = this.files_written[0];
 
 		if (stub_strings_list.length > 0) {
 			return {
