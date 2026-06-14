@@ -19,12 +19,13 @@
 			"preLaunchTask": "${defaultBuildTask}"
 		},
 		{
-			"//": "Use this to test the AI backend and the MCP server: it leaves other extensions ENABLED so Copilot (vscode.lm + MCP sampling) and the Claude Code extension are available in the dev host.",
+			"//": "Use this to test the AI backend and the MCP server: it leaves other extensions ENABLED so Copilot (vscode.lm + MCP sampling) and the Claude Code extension are available. --disable-extension silences individual extensions that crash on activate in the dev host (e.g. trailing-spaces calls the removed util.isNullOrUndefined) without turning the rest off.",
 			"name": "Run Extension (other extensions enabled)",
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--disable-extension=shardulm94.trailing-spaces"
 			],
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
