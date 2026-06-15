@@ -38,11 +38,11 @@
       },
       {
         "command": "mockaccino.mockCurrentFileAi",
-        "title": "Mockaccino: mock current file (AI)."
+        "title": "Mockaccino: mock current file (AI parser)."
       },
       {
         "command": "mockaccino.stubCurrentFileAi",
-        "title": "Mockaccino: stub current file (AI)."
+        "title": "Mockaccino: stub current file (AI parser)."
       },
       {
         "command": "mockaccino.addMcpServerToClaudeCode",
