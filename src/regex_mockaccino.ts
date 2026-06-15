@@ -19,7 +19,7 @@ class RegexMockaccino extends Mockaccino {
 	private implGenerator: any;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
-		super(uri, config, version, workspace_folder, template_path);
+		super(uri, config, version, workspace_folder, template_path, "regex");
 
 		this.c_functions_strings = this.preprocess(content);
 

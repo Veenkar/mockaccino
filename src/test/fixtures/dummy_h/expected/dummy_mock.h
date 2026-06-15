@@ -24,6 +24,7 @@
  * Mock code for dummy.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: dummy.h
  * TIME: 2026-06-13 19:13:15
@@ -66,6 +67,7 @@ public:
  * Mock code for dummy.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: dummy.h
  * TIME: 2026-06-13 19:13:15

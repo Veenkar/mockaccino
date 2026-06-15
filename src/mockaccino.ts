@@ -32,13 +32,13 @@ abstract class Mockaccino {
 	public file_written: string = "";
 	public files_written: string[] = [];
 
-	constructor(uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
+	constructor(uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string, mode: string = "") {
 		this.config = config;
 		this.uri = uri;
 
 		const { localTime, copyright } = this.buildDocMetadata();
 		this.naming = new Naming(this.uri.fsPath);
-		this.context = new TemplateContext(this.naming, version, localTime, copyright);
+		this.context = new TemplateContext(this.naming, version, localTime, copyright, mode);
 
 		const output_path = this.resolveOutputPath(workspace_folder);
 		this.renderer = new TemplateRenderer(template_path, this.context);

@@ -22,6 +22,7 @@
  * Stub code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.h
  * TIME: 2026-06-13 19:13:31
@@ -75,6 +76,7 @@ const int main2(const int, char[])
  * Stub code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.h
  * TIME: 2026-06-13 19:13:31

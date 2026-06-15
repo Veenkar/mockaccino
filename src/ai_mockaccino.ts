@@ -28,7 +28,7 @@ class AiMockaccino extends Mockaccino {
 	private functions: any[] | undefined;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string, complete: (prompt: string) => Promise<string>) {
-		super(uri, config, version, workspace_folder, template_path);
+		super(uri, config, version, workspace_folder, template_path, `ai (input mode: ${config.get('ai.inputMode') || 'declarations'})`);
 
 		this.content = content;
 		this.parser = new AiParser(complete);

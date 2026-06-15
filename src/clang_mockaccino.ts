@@ -38,7 +38,7 @@ class ClangMockaccino extends Mockaccino {
 	   VS Code C/C++ configuration (extension.ts owns that, since it needs the
 	   vscode API). They are merged *after* mockaccino.includeDirectories. */
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string, external_include_dirs: string[] = []) {
-		super(uri, config, version, workspace_folder, template_path);
+		super(uri, config, version, workspace_folder, template_path, "clang");
 
 		this.content = content;
 		this.fsPath = uri.fsPath;

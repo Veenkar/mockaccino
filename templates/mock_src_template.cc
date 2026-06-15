@@ -22,6 +22,7 @@
  * ${header_type_name} code for ${instance.name}.
  *
  * GENERATOR: Mockaccino
+ * MODE: ${instance.mode}
  * VERSION: v${instance.version}
  * INPUT: ${instance.filename}
  * TIME: ${instance.localTime}
@@ -97,6 +98,7 @@ ${impl_strings}
  * ${header_type_name} code for ${instance.name}.
  *
  * GENERATOR: Mockaccino
+ * MODE: ${instance.mode}
  * VERSION: v${instance.version}
  * INPUT: ${instance.filename}
  * TIME: ${instance.localTime}
