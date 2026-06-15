@@ -180,16 +180,17 @@ class ClangParser {
 			};
 		};
 
-		const walk = (nodes: any[], scope: string[], file: string) => {
+		const walk = (nodes: any[], namespaces: string[], classScope: string[], file: string) => {
 			let currentFile = file;
 			for (const node of nodes || []) {
 				if (node.loc && typeof node.loc.file === 'string') {
 					currentFile = node.loc.file;
 				}
 				if (node.kind === 'NamespaceDecl') {
-					walk(node.inner || [], [...scope, node.name || ''], currentFile);
+					walk(node.inner || [], [...namespaces, node.name || ''].filter(Boolean), classScope, currentFile);
 				} else if (node.kind === 'CXXRecordDecl' && node.name && Array.isArray(node.inner)) {
-					const qualifiedName = [...scope, node.name].filter(Boolean).join('::');
+					const classPath = [...classScope, node.name];
+					const qualifiedName = [...namespaces, ...classPath].join('::');
 					const methods = node.inner
 						.filter((m: any) => m.kind === 'CXXMethodDecl')
 						.map(methodFrom)
@@ -199,16 +200,18 @@ class ClangParser {
 							name: node.name,
 							qualifiedName,
 							mockClassName: clangCppNaming.mockClassNameFor(qualifiedName),
+							namespaces,
+							classPath,
 							isAbstract: methods.some((m: any) => m.isPure),
 							methods,
 						});
 					}
-					walk(node.inner, [...scope, node.name], currentFile);  // nested records
+					walk(node.inner, namespaces, classPath, currentFile);  // nested records
 				}
 			}
 		};
 
-		walk(ast.inner || [], [], '<stdin>');
+		walk(ast.inner || [], [], [], '<stdin>');
 		return classes.filter((c) => c.methods.length > 0);
 	}
 

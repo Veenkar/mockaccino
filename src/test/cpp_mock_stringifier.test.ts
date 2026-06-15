@@ -1,6 +1,23 @@
 import * as assert from 'assert';
 
-const { stringifyMockClass, stringifyMockMethod, methodSpecs } = require('../cpp_mock_stringifier');
+const { stringifyMockClass, stringifyMockClasses, stringifyMockMethod, methodSpecs } = require('../cpp_mock_stringifier');
+
+const nestedClass = {
+	name: 'Inner',
+	qualifiedName: 'app::Outer::Inner',
+	mockClassName: 'app_Outer_Inner_Mock',
+	namespaces: ['app'],
+	classPath: ['Outer', 'Inner'],
+	methods: [{ returnType: 'void', name: 'g', paramTypes: '', isConst: false, isNoexcept: false }],
+};
+const globalClass = {
+	name: 'Bare',
+	qualifiedName: 'Bare',
+	mockClassName: 'Bare_Mock',
+	namespaces: [],
+	classPath: ['Bare'],
+	methods: [{ returnType: 'int', name: 'v', paramTypes: '', isConst: false, isNoexcept: false }],
+};
 
 suite('cpp_mock_stringifier.methodSpecs', () => {
 	test('always override; const first, noexcept last', () => {
@@ -37,5 +54,41 @@ suite('cpp_mock_stringifier.stringifyMockClass', () => {
 			'\tMOCK_METHOD(void, reset, (), (override));',
 			'};',
 		].join('\n'));
+	});
+
+	test('flatten (default) uses the flat name and fully-qualified base', () => {
+		assert.strictEqual(stringifyMockClass(nestedClass), [
+			'class app_Outer_Inner_Mock : public app::Outer::Inner {',
+			'public:',
+			'\tMOCK_METHOD(void, g, (), (override));',
+			'};',
+		].join('\n'));
+	});
+
+	test('flatten=false mirrors the namespace with a relative base', () => {
+		assert.strictEqual(stringifyMockClass(nestedClass, false), [
+			'namespace app {',
+			'',
+			'class Outer_Inner_Mock : public Outer::Inner {',
+			'public:',
+			'\tMOCK_METHOD(void, g, (), (override));',
+			'};',
+			'',
+			'} // namespace app',
+		].join('\n'));
+	});
+
+	test('flatten=false leaves a global-namespace class unwrapped', () => {
+		assert.strictEqual(stringifyMockClass(globalClass, false), [
+			'class Bare_Mock : public Bare {',
+			'public:',
+			'\tMOCK_METHOD(int, v, (), (override));',
+			'};',
+		].join('\n'));
+	});
+
+	test('stringifyMockClasses threads the flatten flag', () => {
+		assert.ok(stringifyMockClasses([nestedClass], true).startsWith('class app_Outer_Inner_Mock'));
+		assert.ok(stringifyMockClasses([nestedClass], false).startsWith('namespace app {'));
 	});
 });

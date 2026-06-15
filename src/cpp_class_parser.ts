@@ -25,7 +25,9 @@ interface CppMethod {
 interface CppClass {
 	name: string;            // simple name, e.g. "Inner"
 	qualifiedName: string;   // e.g. "app::Outer::Inner"
-	mockClassName: string;   // e.g. "app_Outer_Inner_Mock"
+	mockClassName: string;   // flat name, e.g. "app_Outer_Inner_Mock"
+	namespaces: string[];    // enclosing namespace frames, e.g. ["app"]
+	classPath: string[];     // class-nesting frames incl. self, e.g. ["Outer", "Inner"]
 	isAbstract: boolean;     // has at least one pure-virtual method
 	methods: CppMethod[];
 }
@@ -123,8 +125,9 @@ function parseMethod(rawStmt: string, enclosingClassName: string): CppMethod | n
 	};
 }
 
-/* Decide what an opening brace introduces, from the text accumulated before it. */
-function classifyOpen(buffer: string, parentQualified: string): Frame {
+/* Decide what an opening brace introduces, from the text accumulated before it and
+   the enclosing frame stack (which supplies the namespace + class-nesting scope). */
+function classifyOpen(buffer: string, stack: Frame[]): Frame {
 	const text = buffer.replace(/\[\[[\s\S]*?\]\]/g, ' ').trim();
 
 	// A namespace (incl. C++17 `namespace a::b` and anonymous `namespace {`).
@@ -138,11 +141,16 @@ function classifyOpen(buffer: string, parentQualified: string): Frame {
 	const cls = text.match(/(?:^|\s)(?:class|struct)\s+([A-Za-z_]\w*)\b/);
 	if (cls && text.indexOf('(') === -1 && !/\btemplate\b/.test(text)) {
 		const name = cls[1];
-		const qualifiedName = parentQualified ? `${parentQualified}::${name}` : name;
+		const namespaces = stack.filter((f) => f.kind === 'namespace' && f.name).map((f) => f.name);
+		const parentClassPath = stack.filter((f) => f.kind === 'class').map((f) => f.name);
+		const classPath = [...parentClassPath, name];
+		const qualifiedName = [...namespaces, ...classPath].join('::');
 		const cppClass: CppClass = {
 			name,
 			qualifiedName,
 			mockClassName: mockClassNameFor(qualifiedName),
+			namespaces,
+			classPath,
 			isAbstract: false,
 			methods: [],
 		};
@@ -151,14 +159,6 @@ function classifyOpen(buffer: string, parentQualified: string): Frame {
 
 	// Anything else (function body, enum, union, control block) is an opaque block.
 	return { kind: 'block', name: '' };
-}
-
-/* The qualified scope formed by the namespace/class frames currently on the stack. */
-function qualifiedScope(stack: Frame[]): string {
-	return stack
-		.filter((f) => (f.kind === 'namespace' || f.kind === 'class') && f.name)
-		.map((f) => f.name)
-		.join('::');
 }
 
 /* Extract every mockable class from C++ source. Comments/preprocessor lines are
@@ -188,7 +188,7 @@ function extractCppClasses(source: string): CppClass[] {
 				}
 				stack.push({ kind: 'block', name: '' });
 			} else {
-				const frame = classifyOpen(buffer, qualifiedScope(stack));
+				const frame = classifyOpen(buffer, stack);
 				if (frame.kind === 'class') {
 					classes.push(frame.cls!);
 				}

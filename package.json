@@ -125,6 +125,11 @@
           "default": true,
           "description": "Only mock C++ classes that are interfaces — abstract (have a pure-virtual method) or whose name matches cpp.interfaceNamePatterns. Disable to mock any class that has at least one overridable virtual method."
         },
+        "mockaccino.cpp.flattenNamespaces": {
+          "type": "boolean",
+          "default": true,
+          "description": "How namespaced C++ mock classes are laid out. On (default): one flat global-namespace class whose name encodes the scope, deriving from the fully-qualified base (app::Outer::Inner -> class app_Outer_Inner_Mock : public app::Outer::Inner). Off: mirror the source namespaces — the mock is wrapped in 'namespace app::... { }' with a base relative to it (class Outer_Inner_Mock : public Outer::Inner)."
+        },
         "mockaccino.cpp.interfaceNamePatterns": {
           "type": "array",
           "items": {

@@ -167,6 +167,7 @@ All settings live under `mockaccino.*` in VS Code settings.
 | `cpp.enabled` | Also generate a `_mock.hpp` of gmock mock classes for C++ interfaces in the file (default on). |
 | `cpp.onlyVirtualOrInterfaceClasses` | Only mock interface-like classes — abstract, or name-matched via `cpp.interfaceNamePatterns` (default on). Off → mock any class with an overridable virtual method. |
 | `cpp.interfaceNamePatterns` | Case-insensitive name substrings that also select a class for mocking (e.g. `interface`). Empty by default — only abstract classes are mocked. |
+| `cpp.flattenNamespaces` | Layout of namespaced mock classes. On (default): one flat global class encoding the scope (`class app_Outer_Inner_Mock : public app::Outer::Inner`). Off: mirror the source namespaces (`namespace app { class Outer_Inner_Mock : public Outer::Inner {…}; }`). |
 
 **Regex backend**
 

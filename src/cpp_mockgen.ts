@@ -21,7 +21,8 @@ function selectCppMockStrings(classes: any[], config: any): string[] {
 		onlyVirtualOrInterface: config.get('cpp.onlyVirtualOrInterfaceClasses') !== false,
 		interfaceNamePatterns: config.get('cpp.interfaceNamePatterns') || [],
 	});
-	return selected.map(cppStringifier.stringifyMockClass);
+	const flatten = config.get('cpp.flattenNamespaces') !== false;
+	return selected.map((c: any) => cppStringifier.stringifyMockClass(c, flatten));
 }
 
 if (typeof module === "object") {

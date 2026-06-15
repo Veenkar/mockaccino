@@ -40,6 +40,8 @@ suite('cpp_class_parser.extractCppClasses', () => {
 		assert.ok(inner, 'innermost class extracted');
 		assert.strictEqual(inner.qualifiedName, 'a::b::Outer::Inner');
 		assert.strictEqual(inner.mockClassName, 'a_b_Outer_Inner_Mock');
+		assert.deepStrictEqual(inner.namespaces, ['a', 'b']);
+		assert.deepStrictEqual(inner.classPath, ['Outer', 'Inner']);
 		assert.strictEqual(inner.methods[0].paramTypes, 'const char*');
 	});
 
