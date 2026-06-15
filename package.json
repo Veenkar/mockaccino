@@ -37,36 +37,20 @@
         "title": "Mockaccino: stub a file (pick location)."
       },
       {
-        "command": "mockaccino.mockCurrentFileClang",
-        "title": "Mockaccino: mock current file (clang)."
+        "command": "mockaccino.mockCurrentFileAdvanced",
+        "title": "Mockaccino: mock current file (advanced — pick regex/clang/AI)."
       },
       {
-        "command": "mockaccino.stubCurrentFileClang",
-        "title": "Mockaccino: stub current file (clang)."
+        "command": "mockaccino.stubCurrentFileAdvanced",
+        "title": "Mockaccino: stub current file (advanced — pick regex/clang/AI)."
       },
       {
-        "command": "mockaccino.mockFileClang",
-        "title": "Mockaccino: mock a file (pick location, clang)."
+        "command": "mockaccino.mockFileAdvanced",
+        "title": "Mockaccino: mock a file (pick location, advanced — pick regex/clang/AI)."
       },
       {
-        "command": "mockaccino.stubFileClang",
-        "title": "Mockaccino: stub a file (pick location, clang)."
-      },
-      {
-        "command": "mockaccino.mockCurrentFileAi",
-        "title": "Mockaccino: mock current file (AI parser)."
-      },
-      {
-        "command": "mockaccino.stubCurrentFileAi",
-        "title": "Mockaccino: stub current file (AI parser)."
-      },
-      {
-        "command": "mockaccino.mockFileAi",
-        "title": "Mockaccino: mock a file (pick location, AI parser)."
-      },
-      {
-        "command": "mockaccino.stubFileAi",
-        "title": "Mockaccino: stub a file (pick location, AI parser)."
+        "command": "mockaccino.stubFileAdvanced",
+        "title": "Mockaccino: stub a file (pick location, advanced — pick regex/clang/AI)."
       },
       {
         "command": "mockaccino.addMcpServerToClaudeCode",

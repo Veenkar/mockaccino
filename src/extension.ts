@@ -16,6 +16,7 @@ var AiMockaccino = require("./ai_mockaccino");
 let mcpServer: { dispose: () => void; url: string } | undefined;
 
 type Operation = 'mock' | 'stub';
+type Method = 'regex' | 'clang' | 'ai';
 
 // Mockaccino logs generator progress and (crucially) clang's parse diagnostics
 // to two places the user can read in full — an error toast is truncated and
@@ -173,31 +174,64 @@ async function runGenerationForFile(context: vscode.ExtensionContext, BackendCla
 	generate(context, BackendClass, operation, source.uri, source.content);
 }
 
-// The AI backend is async (the model call) and needs a `complete` provider, so it
-// gets its own command body instead of the shared runGeneration. The provider chain
-// (claude CLI / vscode.lm; the command path has no MCP client, so no sampling) is
-// shared with the MCP server via ai_providers.buildAiComplete.
-async function runAiGeneration(context: vscode.ExtensionContext, operation: Operation) {
+// The non-default parser backends (clang, AI) are exposed through a single pair
+// of "(advanced)" commands rather than one command each: the user picks the
+// method here. Regex is offered too so the advanced command is a strict superset
+// of the default. Undefined = user cancelled the quick-pick.
+async function pickMethod(): Promise<Method | undefined> {
+	const items: (vscode.QuickPickItem & { method: Method })[] = [
+		{ label: 'Regex', description: 'Default — no toolchain; regex-based parsing', method: 'regex' },
+		{ label: 'Clang', description: 'Resolve includes/types with a real compiler (needs clang)', method: 'clang' },
+		{ label: 'AI', description: 'Model-based parser (needs an AI provider)', method: 'ai' },
+	];
+	const picked = await vscode.window.showQuickPick(items, {
+		title: 'Mockaccino: choose the parser backend',
+		placeHolder: 'Parser backend',
+	});
+	return picked?.method;
+}
+
+// Dispatch a resolved (uri, content) to the chosen backend. Regex/clang take the
+// synchronous `generate` path; AI takes the async provider path.
+async function runWithMethod(context: vscode.ExtensionContext, method: Method, operation: Operation, uri: vscode.Uri, content: string) {
+	if (method === 'ai') {
+		await runAiGenerationOn(context, operation, uri, content);
+	} else {
+		generate(context, method === 'clang' ? ClangMockaccino : RegexMockaccino, operation, uri, content);
+	}
+}
+
+// "Mock/stub current file (advanced)" — pick the method, then run on the editor.
+async function runAdvancedCurrent(context: vscode.ExtensionContext, operation: Operation) {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
 		vscode.window.showWarningMessage('No active editor found.');
 		return;
 	}
-	await runAiGenerationOn(context, operation, editor.document.uri, editor.document.getText());
+	const method = await pickMethod();
+	if (!method) {
+		return;
+	}
+	await runWithMethod(context, method, operation, editor.document.uri, editor.document.getText());
 }
 
-// "Mock/stub a file" command body for the AI backend — point at a file instead
-// of the active editor, then run the (async) AI generation core.
-async function runAiGenerationForFile(context: vscode.ExtensionContext, operation: Operation, uri?: vscode.Uri) {
+// "Mock/stub a file (advanced)" — pick the method, then point at a file.
+async function runAdvancedFile(context: vscode.ExtensionContext, operation: Operation, uri?: vscode.Uri) {
+	const method = await pickMethod();
+	if (!method) {
+		return;
+	}
 	const source = await pickAndReadFile(operation, uri);
 	if (!source) {
 		return;
 	}
-	await runAiGenerationOn(context, operation, source.uri, source.content);
+	await runWithMethod(context, method, operation, source.uri, source.content);
 }
 
-// AI generation core: with the source resolved to (uri, content), build the AI
-// provider chain, run the operation, and report the result.
+// AI generation core (used by runWithMethod): with the source resolved to (uri,
+// content), build the AI provider chain, run the operation, and report the result.
+// The provider chain (claude CLI / vscode.lm; the command path has no MCP client,
+// so no sampling) is shared with the MCP server via ai_providers.buildAiComplete.
 async function runAiGenerationOn(context: vscode.ExtensionContext, operation: Operation, uri: vscode.Uri, content: string) {
 	const config = vscode.workspace.getConfiguration('mockaccino');
 	const version = context.extension.packageJSON.version;
@@ -256,54 +290,49 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	// Each command in package.json maps to a (backend, operation) pair.
-	const commands: [string, any, Operation][] = [
-		['mockaccino.mockCurrentFile', RegexMockaccino, 'mock'],
-		['mockaccino.stubCurrentFile', RegexMockaccino, 'stub'],
-		['mockaccino.mockCurrentFileClang', ClangMockaccino, 'mock'],
-		['mockaccino.stubCurrentFileClang', ClangMockaccino, 'stub'],
+	// Default commands: the regex backend (no toolchain), on the active editor or
+	// a picked file. The clang/AI backends are reached through the "(advanced)"
+	// commands below, which prompt for the method.
+	const commands: [string, Operation][] = [
+		['mockaccino.mockCurrentFile', 'mock'],
+		['mockaccino.stubCurrentFile', 'stub'],
 	];
-
-	for (const [commandId, BackendClass, operation] of commands) {
-		const disposable = vscode.commands.registerCommand(commandId, () =>
-			runGeneration(context, BackendClass, operation)
-		);
-		context.subscriptions.push(disposable);
+	for (const [commandId, operation] of commands) {
+		context.subscriptions.push(vscode.commands.registerCommand(commandId, () =>
+			runGeneration(context, RegexMockaccino, operation)
+		));
 	}
 
 	// "Mock/stub a file" — point at a file via the command palette (or explorer
-	// context menu) instead of the active editor. One pair per synchronous backend.
-	const fileCommands: [string, any, Operation][] = [
-		['mockaccino.mockFile', RegexMockaccino, 'mock'],
-		['mockaccino.stubFile', RegexMockaccino, 'stub'],
-		['mockaccino.mockFileClang', ClangMockaccino, 'mock'],
-		['mockaccino.stubFileClang', ClangMockaccino, 'stub'],
+	// context menu) instead of the active editor. Regex backend.
+	const fileCommands: [string, Operation][] = [
+		['mockaccino.mockFile', 'mock'],
+		['mockaccino.stubFile', 'stub'],
 	];
-	for (const [commandId, BackendClass, operation] of fileCommands) {
+	for (const [commandId, operation] of fileCommands) {
 		context.subscriptions.push(vscode.commands.registerCommand(commandId, (uri?: vscode.Uri) =>
-			runGenerationForFile(context, BackendClass, operation, uri)
+			runGenerationForFile(context, RegexMockaccino, operation, uri)
 		));
 	}
 
-	// The AI backend is async with its own command body.
-	const aiCommands: [string, Operation][] = [
-		['mockaccino.mockCurrentFileAi', 'mock'],
-		['mockaccino.stubCurrentFileAi', 'stub'],
+	// "(advanced)" commands — same operations, but prompt for the parser backend
+	// (regex / clang / AI). Current editor and pick-a-file variants.
+	const advancedCommands: [string, Operation][] = [
+		['mockaccino.mockCurrentFileAdvanced', 'mock'],
+		['mockaccino.stubCurrentFileAdvanced', 'stub'],
 	];
-	for (const [commandId, operation] of aiCommands) {
+	for (const [commandId, operation] of advancedCommands) {
 		context.subscriptions.push(vscode.commands.registerCommand(commandId, () =>
-			runAiGeneration(context, operation)
+			runAdvancedCurrent(context, operation)
 		));
 	}
-
-	// AI "mock/stub a file" — point at a file, AI backend.
-	const aiFileCommands: [string, Operation][] = [
-		['mockaccino.mockFileAi', 'mock'],
-		['mockaccino.stubFileAi', 'stub'],
+	const advancedFileCommands: [string, Operation][] = [
+		['mockaccino.mockFileAdvanced', 'mock'],
+		['mockaccino.stubFileAdvanced', 'stub'],
 	];
-	for (const [commandId, operation] of aiFileCommands) {
+	for (const [commandId, operation] of advancedFileCommands) {
 		context.subscriptions.push(vscode.commands.registerCommand(commandId, (uri?: vscode.Uri) =>
-			runAiGenerationForFile(context, operation, uri)
+			runAdvancedFile(context, operation, uri)
 		));
 	}
 

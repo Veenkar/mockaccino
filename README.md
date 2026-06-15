@@ -35,13 +35,17 @@ The **AI parser backend** asks a language model to do the extraction wherever th
 1. Install **Mockaccino** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino).
 2. Open a C source or header file.
 3. Open the Command Palette (`Ctrl/Cmd+Shift+P`) and run one of:
-   - **Mockaccino: mock current file** — regex backend (default)
-   - **Mockaccino: stub current file** — regex backend (default)
-   - **Mockaccino: mock current file (clang)** — clang backend
-   - **Mockaccino: stub current file (clang)** — clang backend
-   - **Mockaccino: mock current file (AI parser)** — AI backend
-   - **Mockaccino: stub current file (AI parser)** — AI backend
+   - **Mockaccino: mock current file** — regex backend (default), active editor
+   - **Mockaccino: stub current file** — regex backend (default), active editor
+   - **Mockaccino: mock a file (pick location)** — regex backend, pick the file via a dialog
+   - **Mockaccino: stub a file (pick location)** — regex backend, pick the file via a dialog
+   - **Mockaccino: mock current file (advanced — pick regex/clang/AI)** — choose the parser backend
+   - **Mockaccino: stub current file (advanced — pick regex/clang/AI)** — choose the parser backend
+   - **Mockaccino: mock a file (pick location, advanced — pick regex/clang/AI)** — pick the file *and* the backend
+   - **Mockaccino: stub a file (pick location, advanced — pick regex/clang/AI)** — pick the file *and* the backend
 4. The generated files appear next to your input (or in `mockaccino.outputPath`), with `_mock` / `_stub` appended.
+
+   The **clang** and **AI** backends are no longer separate commands — run an **(advanced)** command and pick the backend (regex / clang / AI) from the quick-pick.
 
 <!-- Maintainer note: a short header-in → mock-out demo GIF would shine here. -->
 
