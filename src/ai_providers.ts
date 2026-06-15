@@ -39,7 +39,6 @@ export function buildAiComplete(config: any, samplingComplete?: CompleteFn): {
 	selectionNotes: () => string[];
 } {
 	const preferred: string = config.get('ai.preferredModelSource') || 'sampling';
-	const samplingEnabled = config.get('ai.enableSampling') === true;
 	const claudeCliEnabled = config.get('ai.enableClaudeCli') === true;
 	const claude = new ClaudeCliCompletion(config.get('ai.claudePath') || '', config.get('ai.claudeArgs') || []);
 
@@ -51,9 +50,10 @@ export function buildAiComplete(config: any, samplingComplete?: CompleteFn): {
 	const excludedReasons: Record<string, string> = {};
 	for (const source of order) {
 		if (source === 'sampling') {
-			if (!samplingEnabled) {
-				excludedReasons[source] = 'disabled (set mockaccino.ai.enableSampling to use it)';
-			} else if (typeof samplingComplete !== 'function') {
+			// Sampling is always allowed (the MCP client — e.g. Copilot — prompts the
+			// user for permission itself); it's simply unavailable when there's no
+			// sampling-capable client, i.e. outside the MCP path.
+			if (typeof samplingComplete !== 'function') {
 				excludedReasons[source] = 'unavailable here (no MCP sampling client — only offered when invoked from a sampling-capable client such as Copilot)';
 			} else {
 				providers.push({ source, complete: samplingComplete });

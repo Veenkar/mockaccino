@@ -73,11 +73,11 @@ suite('mcp_tools.describeModelSelection', () => {
 		const notes = McpTools.describeModelSelection(
 			['sampling', 'claudeCli', 'vscodeLm'],
 			'vscodeLm',
-			{ sampling: 'disabled (set mockaccino.ai.enableSampling)', claudeCli: 'disabled (set mockaccino.ai.enableClaudeCli)' },
+			{ sampling: 'unavailable here (no MCP sampling client)', claudeCli: 'disabled (set mockaccino.ai.enableClaudeCli)' },
 			[],
 		);
 		assert.deepStrictEqual(notes, [
-			'sampling: disabled (set mockaccino.ai.enableSampling)',
+			'sampling: unavailable here (no MCP sampling client)',
 			'claudeCli: disabled (set mockaccino.ai.enableClaudeCli)',
 		]);
 	});

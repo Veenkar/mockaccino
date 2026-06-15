@@ -145,11 +145,6 @@
           "default": "declarations",
           "description": "What the AI parser backend feeds the model: 'fullFile' sends the whole source (the model resolves types/context); 'declarations' (default) sends only the candidate function-declaration strings the regex preprocessor extracts (cheaper, mirrors the regex backend); 'declarationsWithContext' sends those declarations to extract plus the whole file as type context the model may read but must not extract from."
         },
-        "mockaccino.ai.enableSampling": {
-          "type": "boolean",
-          "default": false,
-          "description": "Allow the AI parser backend to use the 'sampling' model source (the calling MCP client's model). Only effective when invoked from an MCP client that supports sampling (e.g. Copilot). Off by default — enable it to let the AI parser borrow the client's model."
-        },
         "mockaccino.ai.enableClaudeCli": {
           "type": "boolean",
           "default": false,
