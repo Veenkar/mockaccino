@@ -21,6 +21,10 @@ class TemplateRenderer {
 		return this.render('stub_src_template.cc', "Stub", { stub_strings });
 	}
 
+	renderCppMockHeader(mock_classes: string): string {
+		return this.render('cpp_mock_header_template.hpp', "Mock", { mock_classes });
+	}
+
 	private render(templateFile: string, header_type_name: string, vars: any): string {
 		const template_file_path = path.join(this.template_path, templateFile);
 		let template_file_contents: string;

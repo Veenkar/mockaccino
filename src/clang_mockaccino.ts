@@ -2,6 +2,8 @@ var Mockaccino = require("./mockaccino");
 var ClangParser = require("./clang_parser");
 var FunctionStringifier = require("./function_stringifier");
 var IncludePaths = require("./include_paths");
+var StructuredHelpers = require("./structured_helpers");
+var ClangCppMockgen = require("./cpp_mockgen");
 
 
 /* Clang-based backend. Drives a real clang (`-ast-dump=json`) so includes and
@@ -27,11 +29,17 @@ class ClangMockaccino extends Mockaccino {
 	private external_include_dirs: string[];
 	private functions: any[] | undefined;
 
+	// clang's diagnostics from the last parse, exposed so the extension can log
+	// them to its output channel. `clangHadErrors` means clang exited non-zero
+	// (errors present) even though it may still have emitted a partial AST.
+	public clangDiagnostics: string = '';
+	public clangHadErrors: boolean = false;
+
 	/* external_include_dirs are include directories the caller gathered from the
 	   VS Code C/C++ configuration (extension.ts owns that, since it needs the
 	   vscode API). They are merged *after* mockaccino.includeDirectories. */
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string, external_include_dirs: string[] = []) {
-		super(uri, config, version, workspace_folder, template_path);
+		super(uri, config, version, workspace_folder, template_path, "clang");
 
 		this.content = content;
 		this.fsPath = uri.fsPath;
@@ -45,65 +53,59 @@ class ClangMockaccino extends Mockaccino {
 
 	protected getMockMethodStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.mockMethod(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
 	protected getMockImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.mockImpl(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
 	protected getStubImplStrings(): string[] {
 		return this.getFunctions().map((c_func_info) =>
-			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, this.projectArgs(c_func_info))
+			this.stringifier.stubImpl(c_func_info.returnType, c_func_info.name, StructuredHelpers.projectArgs(c_func_info))
 		);
 	}
 
-	/* Parse once, then apply the same config-driven filters the regex backend
-	   does (skip static/extern, drop ignored names, dedup by name). */
+	/* C++ class mocks via a `-x c++` clang pass; selection/stringify is shared with
+	   the heuristic backends. */
+	protected getCppMockClassStrings(): string[] {
+		if (this.config.get('cpp.enabled') === false) {
+			return [];
+		}
+		const classes = this.parser.parseClasses(this.content, this.fsPath);
+		return ClangCppMockgen.selectCppMockStrings(classes, this.config);
+	}
+
+	/* Parse once, then apply the same config-driven filters every structured
+	   backend shares (skip static/extern, drop ignored names, dedup by name). */
 	private getFunctions(): any[] {
 		if (this.functions !== undefined) {
 			return this.functions;
 		}
-		let fns = this.parser.parse(this.content, this.fsPath);
+		// The C-function parse runs as `-x c`. A C++-only file (e.g. an interface
+		// header) can't be parsed as C and may yield no AST at all; treat that as
+		// "no C functions" so the C++ class-mock path still runs alongside.
+		let parsed: any;
+		try {
+			parsed = this.parser.parse(this.content, this.fsPath);
+		} catch (err: any) {
+			this.clangDiagnostics = err && err.message ? err.message : String(err);
+			this.functions = [];
+			return this.functions;
+		}
+		this.clangDiagnostics = parsed.diagnostics || '';
+		this.clangHadErrors = parsed.status !== 0;
 
-		if (this.config.get('skipStaticFunctions')) {
-			fns = fns.filter((fn: any) => !fn.is_static);
-		}
-		if (this.config.get('skipExternFunctions')) {
-			fns = fns.filter((fn: any) => !fn.is_extern);
-		}
-		const ignored = this.parseIgnoredFunctionNames();
-		if (ignored.length > 0) {
-			fns = fns.filter((fn: any) => !ignored.includes(fn.name));
-		}
-		const seen = new Set<string>();
-		fns = fns.filter((fn: any) => (seen.has(fn.name) ? false : (seen.add(fn.name), true)));
-
+		const fns = StructuredHelpers.filterFunctions(parsed.functions, {
+			skipStatic: this.config.get('skipStaticFunctions'),
+			skipExtern: this.config.get('skipExternFunctions'),
+			ignored: this.parseIgnoredFunctionNames(),
+		});
 		this.functions = fns;
 		return fns;
-	}
-
-	/* The three argument projections, derived from the structured params. Unnamed
-	   params get a synthesised name so the signature and forwarding call stay
-	   valid C. A trailing `...` is added to the types/signature for variadics, but
-	   not to the names (a `...` can't be forwarded by name). */
-	private projectArgs(fn: any): ProjectedArgs {
-		const synth = (p: any, i: number) => p.name || `arg${i + 1}`;
-		const types = fn.params.map((p: any) => p.type);
-		const signature = fn.params.map((p: any, i: number) => `${p.type} ${synth(p, i)}`);
-		const names = fn.params.map((p: any, i: number) => synth(p, i));
-		if (fn.is_variadic) {
-			types.push("...");
-			signature.push("...");
-		}
-		return {
-			types: types.join(", "),
-			signature: signature.join(", "),
-			names: names.join(", "),
-		};
 	}
 
 	/* -I for project includes, -isystem for system header paths, plus any verbatim

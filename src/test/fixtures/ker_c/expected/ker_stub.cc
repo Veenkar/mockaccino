@@ -22,6 +22,7 @@
  * Stub code for ker.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: ker.c
  * TIME: 2026-06-13 19:26:18
@@ -98,6 +99,7 @@ void custom_exit()
  * Stub code for ker.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: ker.c
  * TIME: 2026-06-13 19:26:18

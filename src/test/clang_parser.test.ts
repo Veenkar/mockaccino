@@ -140,3 +140,73 @@ suite('ClangParser.extractTargetFunctions (signature shapes)', () => {
 		assert.deepStrictEqual(fn.params, []);
 	});
 });
+
+suite('ClangParser.extractCppClasses', () => {
+	// A C++ AST: namespace app holds an interface IFoo and a nested Outer::Inner.
+	const ast = {
+		kind: 'TranslationUnitDecl',
+		inner: [
+			{
+				kind: 'NamespaceDecl', name: 'app',
+				inner: [
+					{
+						kind: 'CXXRecordDecl', name: 'IFoo', tagUsed: 'class',
+						inner: [
+							{ kind: 'CXXConstructorDecl', name: 'IFoo' },
+							{ kind: 'CXXDestructorDecl', name: '~IFoo', virtual: true },
+							{
+								kind: 'CXXMethodDecl', name: 'f', virtual: true, pure: true,
+								type: { qualType: 'int (int) const' },
+								inner: [{ kind: 'ParmVarDecl', name: 'x', type: { qualType: 'int' } }],
+							},
+							{ kind: 'CXXMethodDecl', name: 'plain', type: { qualType: 'void (void)' }, inner: [] }, // non-virtual
+							{ kind: 'CXXMethodDecl', name: 'sealed', virtual: true, type: { qualType: 'void (void)' }, inner: [{ kind: 'FinalAttr' }] },
+						],
+					},
+					{
+						kind: 'CXXRecordDecl', name: 'Outer', tagUsed: 'struct',
+						inner: [
+							{
+								kind: 'CXXRecordDecl', name: 'Inner', tagUsed: 'class',
+								inner: [
+									{ kind: 'CXXMethodDecl', name: 'g', virtual: true, pure: true, type: { qualType: 'void (const char *) noexcept' }, inner: [{ kind: 'ParmVarDecl', type: { qualType: 'const char *' } }] },
+								],
+							},
+						],
+					},
+				],
+			},
+			// A class from an included header must be filtered out.
+			{ loc: { file: '/usr/include/thing.hpp' }, kind: 'CXXRecordDecl', name: 'Hidden', inner: [{ kind: 'CXXMethodDecl', name: 'z', virtual: true, pure: true, type: { qualType: 'void (void)' }, inner: [] }] },
+		],
+	};
+
+	const classes = ClangParser.extractCppClasses(ast);
+
+	test('keeps main-file classes with mockable methods, fully qualified', () => {
+		assert.deepStrictEqual(
+			classes.map((c: any) => c.qualifiedName).sort(),
+			['app::IFoo', 'app::Outer::Inner'],
+		);
+	});
+
+	test('drops constructors/destructors/non-virtual/final, keeps virtuals', () => {
+		const ifoo = classes.find((c: any) => c.name === 'IFoo');
+		assert.deepStrictEqual(ifoo.methods.map((m: any) => m.name), ['f']);
+		assert.strictEqual(ifoo.methods[0].isConst, true);
+		assert.strictEqual(ifoo.methods[0].isPure, true);
+		assert.strictEqual(ifoo.methods[0].paramTypes, 'int');
+		assert.strictEqual(ifoo.isAbstract, true);
+	});
+
+	test('nested class qualifies through namespace + outer, and detects noexcept', () => {
+		const inner = classes.find((c: any) => c.name === 'Inner');
+		assert.strictEqual(inner.mockClassName, 'app_Outer_Inner_Mock');
+		assert.strictEqual(inner.methods[0].isNoexcept, true);
+		assert.strictEqual(inner.methods[0].paramTypes, 'const char *');
+	});
+
+	test('excludes classes declared in included headers', () => {
+		assert.ok(!classes.some((c: any) => c.name === 'Hidden'));
+	});
+});

@@ -24,6 +24,7 @@
  * Mock code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.h
  * TIME: 2026-06-13 19:11:31
@@ -62,6 +63,7 @@ public:
  * Mock code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.h
  * TIME: 2026-06-13 19:11:31

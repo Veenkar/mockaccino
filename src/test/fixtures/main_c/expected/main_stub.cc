@@ -22,6 +22,7 @@
  * Stub code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.c
  * TIME: 2026-06-13 19:13:27
@@ -81,6 +82,7 @@ int implicitReturnTypeFunction(int)
  * Stub code for main.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: main.c
  * TIME: 2026-06-13 19:13:27

@@ -33,10 +33,10 @@ The **clang backend** covers the other half: when your header *is* clean and com
 1. Install **Mockaccino** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=SelerLabs.mockaccino).
 2. Open a C source or header file.
 3. Open the Command Palette (`Ctrl/Cmd+Shift+P`) and run one of:
-   - **Mockaccino: mock current file (regex)**
-   - **Mockaccino: stub current file (regex)**
-   - **Mockaccino: mock current file (clang)**
-   - **Mockaccino: stub current file (clang)**
+   - **Mockaccino: mock current file** — regex backend (default)
+   - **Mockaccino: stub current file** — regex backend (default)
+   - **Mockaccino: mock current file (clang)** — clang backend
+   - **Mockaccino: stub current file (clang)** — clang backend
 4. The generated files appear next to your input (or in `mockaccino.outputPath`), with `_mock` / `_stub` appended.
 
 <!-- Maintainer note: a short header-in → mock-out demo GIF would shine here. -->
@@ -115,6 +115,34 @@ int display_width()
 
 (A mock and a stub can't define the same symbol in one binary — use one or the other per test executable.)
 
+### C++ class mocks (`_mock.hpp`)
+
+The same **mock** command also generates gmock **mock classes** for C++ interfaces in the file — there's no separate command and no file-type switch: it mocks free C functions the usual way *and*, when the file declares C++ classes, writes a `_mock.hpp` next to them. gmock can only override `virtual` methods, so Mockaccino targets interface-like classes. Given:
+
+```cpp
+/* sink.hpp */
+namespace metrics {
+class ISink {
+public:
+    virtual ~ISink() = default;
+    virtual void publish(int value) = 0;
+    virtual int  total() const = 0;
+};
+}
+```
+
+it produces (`sink_mock.hpp`):
+
+```cpp
+class metrics_ISink_Mock : public metrics::ISink {
+public:
+    MOCK_METHOD(void, publish, (int), (override));
+    MOCK_METHOD(int, total, (), (const, override));
+};
+```
+
+Namespaces and nested classes are supported — the mock is a flat, global-namespace class whose name encodes the scope (`app::Outer::Inner` → `app_Outer_Inner_Mock`) deriving from the fully-qualified base. By default only **abstract** interfaces (a class with a pure-virtual method) are mocked; set `cpp.interfaceNamePatterns` to also select classes by name, or turn off `cpp.onlyVirtualOrInterfaceClasses` to mock any class with an overridable virtual method.
+
 ## Configuration
 
 All settings live under `mockaccino.*` in VS Code settings.
@@ -130,6 +158,16 @@ All settings live under `mockaccino.*` in VS Code settings.
 | `skipFunctionsWithImplicitReturnType` | Skip functions with an implicit (`int`) return — these are often function-like macros. |
 | `disableDoubleMocking` | Don't mock files that already contain `_mock` / `_stub` in their name. |
 | `copyright` | Copyright notice inserted into generated files (`$YEAR` is expanded). |
+| `mockSourceExtension` | Extension for the generated C-wrapper source files (`_mock` / `_stub`): `cc` (default) or `cpp`. The C mock header stays `.h`, the C++ class mock stays `.hpp`. |
+
+**C++ class mocks**
+
+| Setting | Description |
+|---|---|
+| `cpp.enabled` | Also generate a `_mock.hpp` of gmock mock classes for C++ interfaces in the file (default on). |
+| `cpp.onlyVirtualOrInterfaceClasses` | Only mock interface-like classes — abstract, or name-matched via `cpp.interfaceNamePatterns` (default on). Off → mock any class with an overridable virtual method. |
+| `cpp.interfaceNamePatterns` | Case-insensitive name substrings that also select a class for mocking (e.g. `interface`). Empty by default — only abstract classes are mocked. |
+| `cpp.flattenNamespaces` | Layout of namespaced mock classes. On (default): one flat global class encoding the scope (`class app_Outer_Inner_Mock : public app::Outer::Inner`). Off: mirror the source namespaces (`namespace app { class Outer_Inner_Mock : public Outer::Inner {…}; }`). |
 
 **Regex backend**
 
@@ -154,6 +192,8 @@ All settings live under `mockaccino.*` in VS Code settings.
 - **Regex backend** — the file's preprocessor directives (and any you add in settings) are evaluated, comments and function bodies are stripped, and the remaining function declarations are matched with regular expressions. No include is read and no AST is built, so it needs no knowledge of your type names and tolerates unusual C dialects. The trade-off: very unusual declarators may need a helper macro definition (or the clang backend).
 - **Clang backend** — the source is handed to `clang -ast-dump=json` (fed on stdin, so unsaved edits and `#include "sibling.h"` both work). Mockaccino reads the resulting AST and mocks only the functions **declared in the opened file** — includes are parsed for type resolution but not mocked.
 
+clang's diagnostics (and any generation errors) are logged to a **“Mockaccino” tab in the Terminal panel** *and* to the matching **Output channel** (View → Output → *Mockaccino*). If clang reports errors, you'll get a warning that the generated mock may be incomplete and the log is brought into view with the details.
+
 ## Requirements
 
 - **Regex backend:** none.
@@ -161,8 +201,8 @@ All settings live under `mockaccino.*` in VS Code settings.
 
 ## Scope & limitations
 
-- Mockaccino mocks **free C functions** (C-linkage symbols) — it is not a mock generator for C++ classes, virtual methods, or overloads.
-- The regex backend is heuristic by design: most signatures are handled, but exotic declarators (e.g. function-pointer parameters) may need a configured macro or the clang backend.
+- Mockaccino mocks **free C functions** (C-linkage symbols) and, in the same run, **C++ interface classes** (a `_mock.hpp` of gmock mock classes). The C++ class path covers namespaces, nested classes, and `const`/`noexcept`/`override` methods; **templated classes, operator overloads, and ref-qualified methods are skipped** (MVP).
+- The regex backend is heuristic by design: most signatures are handled, but exotic declarators (e.g. function-pointer parameters) may need a configured macro or the clang backend. The clang backend parses C++ classes from a real AST for exact resolution.
 - The clang backend needs the file — and the includes its signatures depend on — to parse.
 
 ## Links

@@ -4,7 +4,7 @@
   "publisher": "SelerLabs",
   "icon": "images/mockaccino_icon.png",
   "description": "Mock generator for testing C code using C++ gmock classes.",
-  "version": "1.10.1",
+  "version": "1.11.1",
   "repository": {
     "url": "https://github.com/Veenkar/mockaccino"
   },
@@ -14,17 +14,19 @@
   "categories": [
     "Testing"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "mockaccino.mockCurrentFile",
-        "title": "Mockaccino: mock current file (regex)."
+        "title": "Mockaccino: mock current file."
       },
       {
         "command": "mockaccino.stubCurrentFile",
-        "title": "Mockaccino: stub current file (regex)."
+        "title": "Mockaccino: stub current file."
       },
       {
         "command": "mockaccino.mockCurrentFileClang",
@@ -33,6 +35,24 @@
       {
         "command": "mockaccino.stubCurrentFileClang",
         "title": "Mockaccino: stub current file (clang)."
+      },
+      {
+        "command": "mockaccino.mockCurrentFileAi",
+        "title": "Mockaccino: mock current file (AI parser)."
+      },
+      {
+        "command": "mockaccino.stubCurrentFileAi",
+        "title": "Mockaccino: stub current file (AI parser)."
+      },
+      {
+        "command": "mockaccino.addMcpServerToClaudeCode",
+        "title": "Mockaccino: add MCP server to Claude Code (.mcp.json)."
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "mockaccino-mcp",
+        "label": "Mockaccino"
       }
     ],
     "configuration": {
@@ -86,6 +106,38 @@
           "default": "",
           "description": "Path where mocks should be generated. ${workspaceFolder} variable can be used here. If empty generate in the same location as input."
         },
+        "mockaccino.mockSourceExtension": {
+          "type": "string",
+          "enum": [
+            "cc",
+            "cpp"
+          ],
+          "default": "cc",
+          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The C mock header stays .h and the C++ class mock stays .hpp."
+        },
+        "mockaccino.cpp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also generate gmock mock classes (a _mock.hpp) for C++ interfaces found in the file, alongside the C-function mocks. The mock command always does both; turn this off to skip the C++ class path."
+        },
+        "mockaccino.cpp.onlyVirtualOrInterfaceClasses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only mock C++ classes that are interfaces — abstract (have a pure-virtual method) or whose name matches cpp.interfaceNamePatterns. Disable to mock any class that has at least one overridable virtual method."
+        },
+        "mockaccino.cpp.flattenNamespaces": {
+          "type": "boolean",
+          "default": true,
+          "description": "How namespaced C++ mock classes are laid out. On (default): one flat global-namespace class whose name encodes the scope, deriving from the fully-qualified base (app::Outer::Inner -> class app_Outer_Inner_Mock : public app::Outer::Inner). Off: mirror the source namespaces — the mock is wrapped in 'namespace app::... { }' with a base relative to it (class Outer_Inner_Mock : public Outer::Inner)."
+        },
+        "mockaccino.cpp.interfaceNamePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Case-insensitive substrings that, when cpp.onlyVirtualOrInterfaceClasses is on, additionally select a class for mocking by its name (e.g. add 'interface' to also mock non-abstract classes whose name contains 'interface'). Empty by default — only abstract classes are mocked."
+        },
         "mockaccino.includeDirectories": {
           "type": "array",
           "items": {
@@ -114,6 +166,64 @@
           },
           "default": [],
           "description": "Extra arguments passed verbatim to clang (e.g. -nostdinc, -resource-dir=..., -target=..., -std=c11). Escape hatch for controlling the header search and target."
+        },
+        "mockaccino.ai.inputMode": {
+          "type": "string",
+          "enum": [
+            "fullFile",
+            "declarations",
+            "declarationsWithContext"
+          ],
+          "default": "declarations",
+          "description": "What the AI parser backend feeds the model: 'fullFile' sends the whole source (the model resolves types/context); 'declarations' (default) sends only the candidate function-declaration strings the regex preprocessor extracts (cheaper, mirrors the regex backend); 'declarationsWithContext' sends those declarations to extract plus the whole file as type context the model may read but must not extract from."
+        },
+        "mockaccino.ai.enableClaudeCli": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow the AI parser backend to use the 'claudeCli' model source (shells out to the local 'claude' CLI). Off by default — enable it to let the AI parser run the 'claude' CLI."
+        },
+        "mockaccino.ai.preferredModelSource": {
+          "type": "string",
+          "enum": [
+            "sampling",
+            "vscodeLm",
+            "claudeCli"
+          ],
+          "default": "sampling",
+          "description": "Preferred model source for the AI parser backend. 'sampling' uses the calling MCP client's model (Copilot supports it; Claude Code does not); 'vscodeLm' uses the editor's model (Copilot); 'claudeCli' shells out to the 'claude' CLI. On failure it falls back to the other available sources, and the method actually used is reported."
+        },
+        "mockaccino.ai.claudePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the 'claude' CLI used by the AI parser backend's 'claudeCli' model source. If empty, 'claude' is looked up on PATH."
+        },
+        "mockaccino.ai.claudeArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra arguments passed to the 'claude' CLI for the 'claudeCli' model source (e.g. --model). The prompt is always sent on stdin with -p."
+        },
+        "mockaccino.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run the Mockaccino MCP server so AI clients (Copilot agent mode, Claude Code) can generate mocks/stubs. Copilot discovers it automatically; for Claude Code run the 'add MCP server to Claude Code' command."
+        },
+        "mockaccino.mcp.port": {
+          "type": "number",
+          "default": 0,
+          "description": "Localhost TCP port for the MCP server. 0 picks a free port each start (fine for Copilot, which is told the current port). Set a fixed port if you use Claude Code via .mcp.json so the URL stays stable across restarts."
+        },
+        "mockaccino.mcp.enableClangBackend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow MCP clients to use the clang parser backend (off by default; regex is always available over MCP)."
+        },
+        "mockaccino.mcp.enableAiBackend": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow MCP clients to use the AI parser backend (off by default; regex is always available over MCP)."
         }
       }
     }
@@ -146,5 +256,9 @@
     "eslint": "^9.34.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
   }
 }

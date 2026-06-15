@@ -6,20 +6,29 @@ const fs = require('fs');
 class FileWriter {
 	constructor(private output_path: string, private naming: any) {}
 
-	writeMock(header: string, src: string): string {
+	/* Returns every path written (header first), so callers can report them all. */
+	writeMock(header: string, src: string): string[] {
 		const headerPath = this.resolve(this.naming.name + '_mock.h', this.naming.defaultMockHeaderPath);
-		const srcPath = this.resolve(this.naming.name + '_mock.cc', this.naming.defaultMockSrcPath);
+		const srcPath = this.resolve(`${this.naming.name}_mock.${this.naming.sourceExt}`, this.naming.defaultMockSrcPath);
 		console.log(`Writing mock files to: ${headerPath} and ${srcPath}`);
 		fs.writeFileSync(headerPath, header, { flag: 'w' });
 		fs.writeFileSync(srcPath, src, { flag: 'w' });
-		return headerPath;
+		return [headerPath, srcPath];
 	}
 
-	writeStub(src: string): string {
-		const srcPath = this.resolve(this.naming.name + '_stub.cc', this.naming.defaultStubSrcPath);
+	writeStub(src: string): string[] {
+		const srcPath = this.resolve(`${this.naming.name}_stub.${this.naming.sourceExt}`, this.naming.defaultStubSrcPath);
 		console.log(`Writing stub file to: ${srcPath}`);
 		fs.writeFileSync(srcPath, src, { flag: 'w' });
-		return srcPath;
+		return [srcPath];
+	}
+
+	/* The C++ class mock is a single header (gmock classes are header-only). */
+	writeCppMock(header: string): string[] {
+		const headerPath = this.resolve(this.naming.name + '_mock.hpp', this.naming.defaultCppMockHeaderPath);
+		console.log(`Writing C++ mock header to: ${headerPath}`);
+		fs.writeFileSync(headerPath, header, { flag: 'w' });
+		return [headerPath];
 	}
 
 	/* Place the file under the configured output directory if one is set,

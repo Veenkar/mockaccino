@@ -5,6 +5,7 @@ var RegexParserToolbox = RegexParserLib.RegexParserToolbox;
 var FunctionStringifier = require("./function_stringifier");
 var ImplGenerator = require("./impl_generator");
 var Mockaccino = require("./mockaccino");
+var CppMockgen = require("./cpp_mockgen");
 
 
 /* Regex-parser backend: the original Mockaccino behaviour. Runs the
@@ -17,10 +18,12 @@ class RegexMockaccino extends Mockaccino {
 	private regexParser: typeof RegexParser;
 	private stringifier: typeof FunctionStringifier;
 	private implGenerator: any;
+	private rawContent: string;
 
 	constructor(content: string, uri: any, config: any = {}, version: string = "", workspace_folder: string = "", template_path: string) {
-		super(uri, config, version, workspace_folder, template_path);
+		super(uri, config, version, workspace_folder, template_path, "regex");
 
+		this.rawContent = content;
 		this.c_functions_strings = this.preprocess(content);
 
 		const parserConfig: ParserConfig = {
@@ -46,6 +49,10 @@ class RegexMockaccino extends Mockaccino {
 
 	protected getStubImplStrings(): string[] {
 		return this.implGenerator.getStubImplStrings();
+	}
+
+	protected getCppMockClassStrings(): string[] {
+		return CppMockgen.buildCppMockStrings(this.rawContent, this.config);
 	}
 
 	/* Self-contained C preprocessing → array of candidate function-declaration

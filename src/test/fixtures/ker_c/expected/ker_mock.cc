@@ -22,6 +22,7 @@
  * Mock code for ker.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: ker.c
  * TIME: 2026-06-13 19:26:15
@@ -129,6 +130,7 @@ void custom_exit()
  * Mock code for ker.
  *
  * GENERATOR: Mockaccino
+ * MODE: regex
  * VERSION: v1.10.1
  * INPUT: ker.c
  * TIME: 2026-06-13 19:26:15

@@ -61,7 +61,8 @@ function discoverCases(root: string): FixtureCase[] {
 			name,
 			expectedDir,
 			hasMock: fs.existsSync(path.join(expectedDir, `${name}_mock.h`))
-				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`)),
+				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`))
+				|| fs.existsSync(path.join(expectedDir, `${name}_mock.hpp`)),
 			hasStub: fs.existsSync(path.join(expectedDir, `${name}_stub.cc`)),
 		});
 	}
@@ -123,7 +124,7 @@ suite('Acceptance (commands + golden files)', () => {
 			if (c.hasMock) {
 				test('mock', async () => {
 					await vscode.commands.executeCommand('mockaccino.mockCurrentFile');
-					compareGenerated(c, ['_mock.h', '_mock.cc']);
+					compareGenerated(c, ['_mock.h', '_mock.cc', '_mock.hpp']);
 				});
 			}
 			if (c.hasStub) {

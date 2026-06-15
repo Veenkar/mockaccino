@@ -17,8 +17,9 @@ class TemplateContext {
 	readonly version: string;
 	readonly localTime: string;
 	readonly copyright: string;
+	readonly mode: string;
 
-	constructor(naming: typeof Naming, version: string, localTime: string, copyright: string) {
+	constructor(naming: typeof Naming, version: string, localTime: string, copyright: string, mode: string = "") {
 		this.name = naming.name;
 		this.caps_name = naming.caps_name;
 		this.header_name = naming.header_name;
@@ -30,6 +31,7 @@ class TemplateContext {
 		this.version = version;
 		this.localTime = localTime;
 		this.copyright = copyright;
+		this.mode = mode;
 	}
 }
 

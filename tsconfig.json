@@ -8,6 +8,7 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,   /* enable all strict type-checking options */
+		"skipLibCheck": true, /* the @modelcontextprotocol/sdk d.ts files reference DOM/ESM types that aren't clean under Node16; skip checking node_modules declarations */
 		 "typeRoots": ["./node_modules/@types", "./src/typings"],
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

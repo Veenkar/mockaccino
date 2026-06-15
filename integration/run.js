@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawnSync } = require('child_process');
 
 const integrationDir = __dirname;
@@ -116,8 +117,68 @@ console.log('[integration] 2/5 Generating mocks with Mockaccino (regex + clang).
 		}
 	};
 
+	// Generate the C++ class mock (sink.hpp) with one backend — mock only (gmock
+	// classes have no stub). Produces <name>_mock.hpp.
+	const generateCppWith = (BackendClass, outDir, label) => {
+		fs.mkdirSync(outDir, { recursive: true });
+		const log = console.log;
+		const warn = console.warn;
+		console.log = () => {};
+		console.warn = () => {};
+		let result;
+		try {
+			const src = path.join(srcDir, 'sink.hpp');
+			const content = fs.readFileSync(src, 'utf8');
+			const uri = { fsPath: src, scheme: 'file' };
+			const generator = new BackendClass(content, uri, makeConfig(outDir), '0.0.0-test', '', templatesDir);
+			result = generator.mock();
+		} finally {
+			console.log = log;
+			console.warn = warn;
+		}
+		if (result.result !== 0) {
+			fail(`${label} C++ mock generation for sink.hpp returned ${result.result}: ${result.message}`);
+		}
+		log(`  [${label}] sink.hpp -> ${result.mock_count} C++ class mock(s)`);
+	};
+
 	generateWith(RegexMockaccino, genDir, 'regex');
 	generateWith(ClangMockaccino, genClangDir, 'clang');
+	generateCppWith(RegexMockaccino, genDir, 'regex');
+	generateCppWith(ClangMockaccino, genClangDir, 'clang');
+
+	// Negative path: a header with a deliberate type error must surface clang's
+	// diagnostics. clang still emits a partial AST (so generation succeeds for the
+	// valid decls), but the backend must report clangHadErrors and the error text
+	// — that is what the extension shows in its Mockaccino log.
+	{
+		const probeOut = fs.mkdtempSync(path.join(os.tmpdir(), 'mockaccino-clang-err-'));
+		const probeContent = 'int good_fn(void);\nUndefinedType_T bad_fn(void);\n';
+		const probeUri = { fsPath: path.join(srcDir, '__clang_error_probe.h'), scheme: 'file' };
+		const log = console.log;
+		const warn = console.warn;
+		console.log = () => {};
+		console.warn = () => {};
+		let probe;
+		try {
+			probe = new ClangMockaccino(probeContent, probeUri, makeConfig(probeOut), '0.0.0-test', '', templatesDir);
+			probe.mock();
+		} finally {
+			console.log = log;
+			console.warn = warn;
+		}
+		if (probe.clangHadErrors !== true) {
+			fail('clang error reporting: expected clangHadErrors=true for a header with an undefined type');
+		}
+		if (!/error:/i.test(probe.clangDiagnostics)) {
+			fail(`clang error reporting: expected diagnostics to contain an error, got:\n${probe.clangDiagnostics}`);
+		}
+		if (!/UndefinedType_T/.test(probe.clangDiagnostics)) {
+			fail(`clang error reporting: diagnostics should name the offending type, got:\n${probe.clangDiagnostics}`);
+		}
+		fs.rmSync(probeOut, { recursive: true, force: true });
+		console.log(`  [clang] error reporting OK: "${probe.clangDiagnostics.split('\n')[0].trim()}"`);
+	}
 }
 
 // --- 3. configure + build with CMake (clang) ----------------------------------
