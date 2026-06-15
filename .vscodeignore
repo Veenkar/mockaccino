@@ -12,3 +12,10 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+integration/**
+.claude/**
+.github/**
+scripts/**
+lic/**
+CLAUDE.md
+MCP_PLAN.md
