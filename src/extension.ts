@@ -133,12 +133,11 @@ function generate(context: vscode.ExtensionContext, BackendClass: any, operation
 	}
 }
 
-// "Mock/stub a file" command body: instead of the active editor, the user points
-// at a file. When a uri is supplied (invoked from the explorer context menu, or
-// by tests) it is used directly; otherwise an open dialog is shown. The file is
-// read off disk (it need not be open in an editor), then generation runs through
-// the regex backend (the non-advanced path). Async only to await the dialog/read.
-async function runGenerationForFile(context: vscode.ExtensionContext, operation: Operation, uri?: vscode.Uri) {
+// Resolve the source for a "mock/stub a file" command: when a uri is supplied
+// (invoked from the explorer context menu, or by tests) it is used directly;
+// otherwise an open dialog is shown. The file is read off disk (it need not be
+// open in an editor). Returns undefined on cancel or read failure (after toasting).
+async function pickAndReadFile(operation: Operation, uri?: vscode.Uri): Promise<{ uri: vscode.Uri; content: string } | undefined> {
 	let target = uri;
 	if (!target) {
 		const picked = await vscode.window.showOpenDialog({
@@ -148,22 +147,30 @@ async function runGenerationForFile(context: vscode.ExtensionContext, operation:
 			filters: { 'C/C++ sources and headers': ['c', 'h', 'hpp', 'hh', 'hxx', 'cc', 'cpp'], 'All files': ['*'] },
 		});
 		if (!picked || picked.length === 0) {
-			return; // user cancelled
+			return undefined; // user cancelled
 		}
 		target = picked[0];
 	}
 
-	let content: string;
 	try {
 		const bytes = await vscode.workspace.fs.readFile(target);
-		content = Buffer.from(bytes).toString('utf8');
+		return { uri: target, content: Buffer.from(bytes).toString('utf8') };
 	} catch (err: any) {
 		const message = err && err.message ? err.message : String(err);
 		vscode.window.showErrorMessage(`Mockaccino: could not read ${target.fsPath} — ${message}`);
+		return undefined;
+	}
+}
+
+// "Mock/stub a file" command body for the synchronous backends (regex/clang):
+// instead of the active editor, the user points at a file. Async only to await
+// the dialog/read; generation itself is synchronous.
+async function runGenerationForFile(context: vscode.ExtensionContext, BackendClass: any, operation: Operation, uri?: vscode.Uri) {
+	const source = await pickAndReadFile(operation, uri);
+	if (!source) {
 		return;
 	}
-
-	generate(context, RegexMockaccino, operation, target, content);
+	generate(context, BackendClass, operation, source.uri, source.content);
 }
 
 // The AI backend is async (the model call) and needs a `complete` provider, so it
@@ -171,14 +178,28 @@ async function runGenerationForFile(context: vscode.ExtensionContext, operation:
 // (claude CLI / vscode.lm; the command path has no MCP client, so no sampling) is
 // shared with the MCP server via ai_providers.buildAiComplete.
 async function runAiGeneration(context: vscode.ExtensionContext, operation: Operation) {
-	const config = vscode.workspace.getConfiguration('mockaccino');
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
 		vscode.window.showWarningMessage('No active editor found.');
 		return;
 	}
-	const uri = editor.document.uri;
-	const content = editor.document.getText();
+	await runAiGenerationOn(context, operation, editor.document.uri, editor.document.getText());
+}
+
+// "Mock/stub a file" command body for the AI backend — point at a file instead
+// of the active editor, then run the (async) AI generation core.
+async function runAiGenerationForFile(context: vscode.ExtensionContext, operation: Operation, uri?: vscode.Uri) {
+	const source = await pickAndReadFile(operation, uri);
+	if (!source) {
+		return;
+	}
+	await runAiGenerationOn(context, operation, source.uri, source.content);
+}
+
+// AI generation core: with the source resolved to (uri, content), build the AI
+// provider chain, run the operation, and report the result.
+async function runAiGenerationOn(context: vscode.ExtensionContext, operation: Operation, uri: vscode.Uri, content: string) {
+	const config = vscode.workspace.getConfiguration('mockaccino');
 	const version = context.extension.packageJSON.version;
 	let wf = '';
 	if (vscode.workspace.workspaceFolders !== undefined) {
@@ -251,14 +272,16 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	// "Mock/stub a file" — point at a file via the command palette (or explorer
-	// context menu) instead of the active editor. Regex backend only.
-	const fileCommands: [string, Operation][] = [
-		['mockaccino.mockFile', 'mock'],
-		['mockaccino.stubFile', 'stub'],
+	// context menu) instead of the active editor. One pair per synchronous backend.
+	const fileCommands: [string, any, Operation][] = [
+		['mockaccino.mockFile', RegexMockaccino, 'mock'],
+		['mockaccino.stubFile', RegexMockaccino, 'stub'],
+		['mockaccino.mockFileClang', ClangMockaccino, 'mock'],
+		['mockaccino.stubFileClang', ClangMockaccino, 'stub'],
 	];
-	for (const [commandId, operation] of fileCommands) {
+	for (const [commandId, BackendClass, operation] of fileCommands) {
 		context.subscriptions.push(vscode.commands.registerCommand(commandId, (uri?: vscode.Uri) =>
-			runGenerationForFile(context, operation, uri)
+			runGenerationForFile(context, BackendClass, operation, uri)
 		));
 	}
 
@@ -270,6 +293,17 @@ export function activate(context: vscode.ExtensionContext) {
 	for (const [commandId, operation] of aiCommands) {
 		context.subscriptions.push(vscode.commands.registerCommand(commandId, () =>
 			runAiGeneration(context, operation)
+		));
+	}
+
+	// AI "mock/stub a file" — point at a file, AI backend.
+	const aiFileCommands: [string, Operation][] = [
+		['mockaccino.mockFileAi', 'mock'],
+		['mockaccino.stubFileAi', 'stub'],
+	];
+	for (const [commandId, operation] of aiFileCommands) {
+		context.subscriptions.push(vscode.commands.registerCommand(commandId, (uri?: vscode.Uri) =>
+			runAiGenerationForFile(context, operation, uri)
 		));
 	}
 

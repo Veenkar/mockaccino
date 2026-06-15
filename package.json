@@ -45,12 +45,28 @@
         "title": "Mockaccino: stub current file (clang)."
       },
       {
+        "command": "mockaccino.mockFileClang",
+        "title": "Mockaccino: mock a file (pick location, clang)."
+      },
+      {
+        "command": "mockaccino.stubFileClang",
+        "title": "Mockaccino: stub a file (pick location, clang)."
+      },
+      {
         "command": "mockaccino.mockCurrentFileAi",
         "title": "Mockaccino: mock current file (AI parser)."
       },
       {
         "command": "mockaccino.stubCurrentFileAi",
         "title": "Mockaccino: stub current file (AI parser)."
+      },
+      {
+        "command": "mockaccino.mockFileAi",
+        "title": "Mockaccino: mock a file (pick location, AI parser)."
+      },
+      {
+        "command": "mockaccino.stubFileAi",
+        "title": "Mockaccino: stub a file (pick location, AI parser)."
       },
       {
         "command": "mockaccino.addMcpServerToClaudeCode",
