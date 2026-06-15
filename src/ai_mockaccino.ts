@@ -3,6 +3,7 @@ var AiParser = require("./ai_parser");
 var FunctionStringifier = require("./function_stringifier");
 var StructuredHelpers = require("./structured_helpers");
 var extractDeclarations = require("./declaration_extractor");
+var AiCppMockgen = require("./cpp_mockgen");
 
 
 /* AI-parser backend. Like the regex backend, but wherever the regex backend uses
@@ -88,6 +89,12 @@ class AiMockaccino extends Mockaccino {
 			throw new Error("AiMockaccino: call await prepare() before mock()/stub().");
 		}
 		return this.functions;
+	}
+
+	/* C++ class mocking uses the same heuristic extractor as the regex backend (it is
+	   model-independent source parsing), so the AI backend gets it too. */
+	protected getCppMockClassStrings(): string[] {
+		return AiCppMockgen.buildCppMockStrings(this.content, this.config);
 	}
 }
 

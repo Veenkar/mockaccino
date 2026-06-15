@@ -3,6 +3,7 @@ var ClangParser = require("./clang_parser");
 var FunctionStringifier = require("./function_stringifier");
 var IncludePaths = require("./include_paths");
 var StructuredHelpers = require("./structured_helpers");
+var ClangCppMockgen = require("./cpp_mockgen");
 
 
 /* Clang-based backend. Drives a real clang (`-ast-dump=json`) so includes and
@@ -68,13 +69,33 @@ class ClangMockaccino extends Mockaccino {
 		);
 	}
 
+	/* C++ class mocks via a `-x c++` clang pass; selection/stringify is shared with
+	   the heuristic backends. */
+	protected getCppMockClassStrings(): string[] {
+		if (this.config.get('cpp.enabled') === false) {
+			return [];
+		}
+		const classes = this.parser.parseClasses(this.content, this.fsPath);
+		return ClangCppMockgen.selectCppMockStrings(classes, this.config);
+	}
+
 	/* Parse once, then apply the same config-driven filters every structured
 	   backend shares (skip static/extern, drop ignored names, dedup by name). */
 	private getFunctions(): any[] {
 		if (this.functions !== undefined) {
 			return this.functions;
 		}
-		const parsed = this.parser.parse(this.content, this.fsPath);
+		// The C-function parse runs as `-x c`. A C++-only file (e.g. an interface
+		// header) can't be parsed as C and may yield no AST at all; treat that as
+		// "no C functions" so the C++ class-mock path still runs alongside.
+		let parsed: any;
+		try {
+			parsed = this.parser.parse(this.content, this.fsPath);
+		} catch (err: any) {
+			this.clangDiagnostics = err && err.message ? err.message : String(err);
+			this.functions = [];
+			return this.functions;
+		}
 		this.clangDiagnostics = parsed.diagnostics || '';
 		this.clangHadErrors = parsed.status !== 0;
 

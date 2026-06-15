@@ -117,8 +117,35 @@ console.log('[integration] 2/5 Generating mocks with Mockaccino (regex + clang).
 		}
 	};
 
+	// Generate the C++ class mock (sink.hpp) with one backend — mock only (gmock
+	// classes have no stub). Produces <name>_mock.hpp.
+	const generateCppWith = (BackendClass, outDir, label) => {
+		fs.mkdirSync(outDir, { recursive: true });
+		const log = console.log;
+		const warn = console.warn;
+		console.log = () => {};
+		console.warn = () => {};
+		let result;
+		try {
+			const src = path.join(srcDir, 'sink.hpp');
+			const content = fs.readFileSync(src, 'utf8');
+			const uri = { fsPath: src, scheme: 'file' };
+			const generator = new BackendClass(content, uri, makeConfig(outDir), '0.0.0-test', '', templatesDir);
+			result = generator.mock();
+		} finally {
+			console.log = log;
+			console.warn = warn;
+		}
+		if (result.result !== 0) {
+			fail(`${label} C++ mock generation for sink.hpp returned ${result.result}: ${result.message}`);
+		}
+		log(`  [${label}] sink.hpp -> ${result.mock_count} C++ class mock(s)`);
+	};
+
 	generateWith(RegexMockaccino, genDir, 'regex');
 	generateWith(ClangMockaccino, genClangDir, 'clang');
+	generateCppWith(RegexMockaccino, genDir, 'regex');
+	generateCppWith(ClangMockaccino, genClangDir, 'clang');
 
 	// Negative path: a header with a deliberate type error must surface clang's
 	// diagnostics. clang still emits a partial AST (so generation succeeds for the

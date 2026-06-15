@@ -14,7 +14,7 @@ set(GEN_CLANG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated_clang)
 # The mocks are produced by Mockaccino (both backends) before CMake runs (see
 # run.js). Fail early with a clear message if generation was skipped.
 foreach(dir ${GEN_DIR} ${GEN_CLANG_DIR})
-    foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc display_stub.cc rng_stub.cc)
+    foreach(f display_mock.h display_mock.cc rng_mock.h rng_mock.cc display_stub.cc rng_stub.cc sink_mock.hpp)
         if(NOT EXISTS ${dir}/${f})
             message(FATAL_ERROR
                 "Generated mock '${f}' not found in ${dir}.\n"
@@ -90,9 +90,19 @@ function(add_backend_tests backend gen_dir)
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>
     )
 
+    # C++ class-mock tests: the generated sink_mock.hpp (a gmock class deriving from
+    # metrics::ISink) is driven via EXPECT_CALL against the real consumer sink.cpp.
+    add_executable(cpp_mock_tests_${backend}
+        ${TEST_DIR}/test_cpp_mock.cpp
+        ${SRC_DIR}/sink.cpp
+    )
+    target_include_directories(cpp_mock_tests_${backend} PRIVATE ${SRC_DIR} ${gen_dir})
+    target_link_libraries(cpp_mock_tests_${backend} PRIVATE gmock gmock_main)
+
     gtest_discover_tests(unit_tests_${backend} TEST_PREFIX "${backend}.")
     gtest_discover_tests(stub_tests_${backend} TEST_PREFIX "${backend}.")
     gtest_discover_tests(mock_assert_tests_${backend} TEST_PREFIX "${backend}.")
+    gtest_discover_tests(cpp_mock_tests_${backend} TEST_PREFIX "${backend}.")
 endfunction()
 
 add_backend_tests(regex ${GEN_DIR})

@@ -106,6 +106,33 @@
           "default": "",
           "description": "Path where mocks should be generated. ${workspaceFolder} variable can be used here. If empty generate in the same location as input."
         },
+        "mockaccino.mockSourceExtension": {
+          "type": "string",
+          "enum": [
+            "cc",
+            "cpp"
+          ],
+          "default": "cc",
+          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The C mock header stays .h and the C++ class mock stays .hpp."
+        },
+        "mockaccino.cpp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also generate gmock mock classes (a _mock.hpp) for C++ interfaces found in the file, alongside the C-function mocks. The mock command always does both; turn this off to skip the C++ class path."
+        },
+        "mockaccino.cpp.onlyVirtualOrInterfaceClasses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only mock C++ classes that are interfaces — abstract (have a pure-virtual method) or whose name matches cpp.interfaceNamePatterns. Disable to mock any class that has at least one overridable virtual method."
+        },
+        "mockaccino.cpp.interfaceNamePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Case-insensitive substrings that, when cpp.onlyVirtualOrInterfaceClasses is on, additionally select a class for mocking by its name (e.g. add 'interface' to also mock non-abstract classes whose name contains 'interface'). Empty by default — only abstract classes are mocked."
+        },
         "mockaccino.includeDirectories": {
           "type": "array",
           "items": {

@@ -37,7 +37,7 @@ abstract class Mockaccino {
 		this.uri = uri;
 
 		const { localTime, copyright } = this.buildDocMetadata();
-		this.naming = new Naming(this.uri.fsPath);
+		this.naming = new Naming(this.uri.fsPath, this.config.get('mockSourceExtension'));
 		this.context = new TemplateContext(this.naming, version, localTime, copyright, mode);
 
 		const output_path = this.resolveOutputPath(workspace_folder);
@@ -52,6 +52,11 @@ abstract class Mockaccino {
 	protected abstract getMockMethodStrings(): string[];  // MOCK_METHOD(...) header entries
 	protected abstract getMockImplStrings(): string[];    // mock .cc wrapper bodies
 	protected abstract getStubImplStrings(): string[];    // stub .cc bodies
+
+	/* C++ gmock mock-class blocks (one rendered `class X_Mock : public Base {…}` per
+	   selected interface). Default none; backends that parse C++ classes override it.
+	   Runs only from mock(), alongside the C-function output. */
+	protected getCppMockClassStrings(): string[] { return []; }
 
 	/* Shared config parsing, available to every backend. */
 	protected parseIgnoredFunctionNames(): string[] {
@@ -106,25 +111,46 @@ abstract class Mockaccino {
 			return this.notAFileResult();
 		}
 
+		const files: string[] = [];
+
+		// C functions, the original way — only emit the .h/.cc when there are any, so
+		// a header that holds only C++ classes doesn't litter empty C mock files.
 		const mock_strings_list = this.getMockMethodStrings();
-		const mock_strings = mock_strings_list.join("\n");
-		const impl_strings = this.getMockImplStrings().join("\n");
-		console.log("mock strings:");
-		console.log(mock_strings);
-
-		const header = this.renderer.renderMockHeader(mock_strings);
-		const src = this.renderer.renderMockSrc(impl_strings);
-		this.files_written = this.writer.writeMock(header, src);
-		this.file_written = this.files_written[0];
-
 		if (mock_strings_list.length > 0) {
-			return {
-				result: 0,
-				message: `${mock_strings_list.length} mocks written to:\n${this.file_written} (.cc)`,
-				mock_count: mock_strings_list.length,
-			};
+			const mock_strings = mock_strings_list.join("\n");
+			const impl_strings = this.getMockImplStrings().join("\n");
+			console.log("mock strings:");
+			console.log(mock_strings);
+			const header = this.renderer.renderMockHeader(mock_strings);
+			const src = this.renderer.renderMockSrc(impl_strings);
+			files.push(...this.writer.writeMock(header, src));
 		}
-		return this.emptyContentResult();
+
+		// C++ classes, the gmock way — a single _mock.hpp, only when classes were found.
+		const cpp_class_strings = this.getCppMockClassStrings();
+		if (cpp_class_strings.length > 0) {
+			const cppHeader = this.renderer.renderCppMockHeader(cpp_class_strings.join("\n\n"));
+			files.push(...this.writer.writeCppMock(cppHeader));
+		}
+
+		if (files.length === 0) {
+			return this.emptyContentResult();
+		}
+		this.files_written = files;
+		this.file_written = files[0];
+
+		const parts: string[] = [];
+		if (mock_strings_list.length > 0) {
+			parts.push(`${mock_strings_list.length} function mock(s)`);
+		}
+		if (cpp_class_strings.length > 0) {
+			parts.push(`${cpp_class_strings.length} C++ class mock(s)`);
+		}
+		return {
+			result: 0,
+			message: `${parts.join(" and ")} written to:\n${files.join("\n")}`,
+			mock_count: mock_strings_list.length + cpp_class_strings.length,
+		};
 	}
 
 	public stub(): GenerationResult {
