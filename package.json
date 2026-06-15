@@ -29,6 +29,14 @@
         "title": "Mockaccino: stub current file."
       },
       {
+        "command": "mockaccino.mockFile",
+        "title": "Mockaccino: mock a file (pick location)."
+      },
+      {
+        "command": "mockaccino.stubFile",
+        "title": "Mockaccino: stub a file (pick location)."
+      },
+      {
         "command": "mockaccino.mockCurrentFileClang",
         "title": "Mockaccino: mock current file (clang)."
       },

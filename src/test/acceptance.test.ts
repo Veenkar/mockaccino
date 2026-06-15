@@ -133,6 +133,22 @@ suite('Acceptance (commands + golden files)', () => {
 					compareGenerated(c, ['_stub.cc']);
 				});
 			}
+
+			// The "mock/stub a file" commands point at a file via its uri (the open
+			// dialog is bypassed when a uri arg is supplied) and must produce the
+			// same output as the active-editor commands.
+			if (c.hasMock) {
+				test('mockFile (by uri)', async () => {
+					await vscode.commands.executeCommand('mockaccino.mockFile', vscode.Uri.file(c.inputPath));
+					compareGenerated(c, ['_mock.h', '_mock.cc', '_mock.hpp']);
+				});
+			}
+			if (c.hasStub) {
+				test('stubFile (by uri)', async () => {
+					await vscode.commands.executeCommand('mockaccino.stubFile', vscode.Uri.file(c.inputPath));
+					compareGenerated(c, ['_stub.cc']);
+				});
+			}
 		});
 	}
 });
