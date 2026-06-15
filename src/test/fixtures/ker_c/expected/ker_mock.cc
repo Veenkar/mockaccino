@@ -94,24 +94,6 @@ Ker_Mock::~Ker_Mock()
 /*===========================================================================*
  * Mocked function implementations
  *===========================================================================*/
-int MODULE_AUTHOR("Ruan de Bruyn")
-{
-	KER_MOCK_ASSERT_INSTANCE_EXISTS();
-	return ker_mock_->MODULE_AUTHOR("Ruan de Bruyn");
-}
-
-int MODULE_DESCRIPTION("Hello world driver")
-{
-	KER_MOCK_ASSERT_INSTANCE_EXISTS();
-	return ker_mock_->MODULE_DESCRIPTION("Hello world driver");
-}
-
-int MODULE_LICENSE("GPL")
-{
-	KER_MOCK_ASSERT_INSTANCE_EXISTS();
-	return ker_mock_->MODULE_LICENSE("GPL");
-}
-
 int custom_init()
 {
 	KER_MOCK_ASSERT_INSTANCE_EXISTS();

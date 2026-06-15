@@ -54,9 +54,6 @@ class Ker_Mock {
 public:
 	Ker_Mock();
 	virtual ~Ker_Mock();
-	MOCK_METHOD(int, MODULE_AUTHOR, ("Ruan de Bruyn"));
-	MOCK_METHOD(int, MODULE_DESCRIPTION, ("Hello world driver"));
-	MOCK_METHOD(int, MODULE_LICENSE, ("GPL"));
 	MOCK_METHOD(int, custom_init, ());
 	MOCK_METHOD(void, custom_exit, ());
 };

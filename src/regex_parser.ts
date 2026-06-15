@@ -107,6 +107,18 @@ class RegexParserToolbox
 
 		let [, returnType, name, args] = match;
 
+		// A string or character literal in the argument list means this is a macro
+		// invocation (e.g. MODULE_AUTHOR("...");), not a function declaration: real C
+		// parameter lists only contain types/names. Reject it so it isn't mocked.
+		if (/["']/.test(args)) {
+			return {
+				returnType: undefined,
+				name: "",
+				arguments: "",
+				is_static: false,
+				is_extern: false
+			};
+		}
 
 		// Remove unwanted modifiers from returnType (keep const, volatile, etc.)
 		if (returnType) {

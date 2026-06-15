@@ -53,6 +53,16 @@ suite('RegexParserToolbox.parseFunctionDeclaration', () => {
 		const fn = RegexParserToolbox.parseFunctionDeclaration('not a function', false);
 		assert.strictEqual(fn.name, '');
 	});
+
+	test('rejects macro invocations with a string-literal argument', () => {
+		const fn = RegexParserToolbox.parseFunctionDeclaration('MODULE_AUTHOR("Ruan de Bruyn");', false);
+		assert.strictEqual(fn.name, '');
+	});
+
+	test('rejects macro invocations with a char-literal argument', () => {
+		const fn = RegexParserToolbox.parseFunctionDeclaration("SET_SEP(',');", false);
+		assert.strictEqual(fn.name, '');
+	});
 });
 
 suite('RegexParserToolbox argument processors', () => {

@@ -63,24 +63,6 @@ extern "C" {
  *===========================================================================*/
 extern "C" {
 
-int MODULE_AUTHOR("Ruan de Bruyn")
-{
-	KER_STUB_PRINT_INFO();
-	return static_cast<int>(0);
-}
-
-int MODULE_DESCRIPTION("Hello world driver")
-{
-	KER_STUB_PRINT_INFO();
-	return static_cast<int>(0);
-}
-
-int MODULE_LICENSE("GPL")
-{
-	KER_STUB_PRINT_INFO();
-	return static_cast<int>(0);
-}
-
 int custom_init()
 {
 	KER_STUB_PRINT_INFO();
