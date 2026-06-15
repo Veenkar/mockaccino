@@ -14,19 +14,21 @@ It's built for the people who feel that pain most: **testing embedded, firmware,
 
 ## Why Mockaccino
 
-There are two ways to turn C into mocks, and Mockaccino ships **both**, switchable per command:
+There are three ways to turn C into mocks, and Mockaccino ships **all of them**, switchable per command:
 
-| | **Regex backend** (default) | **Clang backend** |
-|---|---|---|
-| Command | *“… (regex)”* | *“… (clang)”* |
-| Needs a compilable file + resolvable includes | **No** | Yes |
-| Unknown/vendor type modifiers (e.g. AUTOSAR `FUNC(...)`, `P2VAR(...)`) | Handled via configurable macro definitions | Resolved by the compiler |
-| External tools | **None** — pure TypeScript | A `clang` binary |
-| Best for | Vendor/AUTOSAR headers, legacy code, half-finished or non-compiling snippets | Clean, compilable headers where you want exact type resolution |
+| | **Regex backend** (default) | **Clang backend** | **AI parser backend** |
+|---|---|---|---|
+| Command | *“mock/stub current file”* | *“… (clang)”* | *“… (AI parser)”* |
+| Needs a compilable file + resolvable includes | **No** | Yes | **No** |
+| Unknown/vendor type modifiers (e.g. AUTOSAR `FUNC(...)`, `P2VAR(...)`) | Handled via configurable macro definitions | Resolved by the compiler | Understood by the model |
+| External tools | **None** — pure TypeScript | A `clang` binary | A language model (Copilot, MCP sampling, or the `claude` CLI) |
+| Best for | Vendor/AUTOSAR headers, legacy code, half-finished or non-compiling snippets | Clean, compilable headers where you want exact type resolution | Messy or unusual signatures regex can't parse, when a model is available |
 
 The **regex backend** is the original superpower: it parses with regular expressions, not a real compiler, so it generates a usable mock **without resolving includes, building the project, or understanding your custom type modifiers**. That's exactly the situation embedded/legacy C testing puts you in — and where compiler-based tools tend to choke.
 
 The **clang backend** covers the other half: when your header *is* clean and compilable, it asks a real `clang` for the truth, so includes, typedefs, and struct-by-value parameters resolve precisely.
+
+The **AI parser backend** asks a language model to do the extraction wherever the regex backend would use a regular expression — so it shares the regex backend's tolerance for non-compiling input but can read signatures regex heuristics miss. The model comes from whatever's available (Copilot via `vscode.lm`, MCP sampling, or the local `claude` CLI). Mockaccino also runs as an **[MCP server](#mcp-server)**, so AI clients (Copilot agent mode, Claude Code) can drive the same generation.
 
 ## Quick start
 
@@ -37,6 +39,8 @@ The **clang backend** covers the other half: when your header *is* clean and com
    - **Mockaccino: stub current file** — regex backend (default)
    - **Mockaccino: mock current file (clang)** — clang backend
    - **Mockaccino: stub current file (clang)** — clang backend
+   - **Mockaccino: mock current file (AI parser)** — AI backend
+   - **Mockaccino: stub current file (AI parser)** — AI backend
 4. The generated files appear next to your input (or in `mockaccino.outputPath`), with `_mock` / `_stub` appended.
 
 <!-- Maintainer note: a short header-in → mock-out demo GIF would shine here. -->
@@ -187,10 +191,37 @@ All settings live under `mockaccino.*` in VS Code settings.
 
 > The clang backend also reads include paths from the C/C++ extension's configuration (`C_Cpp.default.includePath` and `.vscode/c_cpp_properties.json`). When a header exists in more than one include directory, clang uses the first match in `-I` order — Mockaccino lists your `includeDirectories` first, so they win.
 
+**AI parser backend**
+
+| Setting | Description |
+|---|---|
+| `ai.inputMode` | What the model sees: `fullFile` (the whole source, model resolves context), `declarations` (default — only the candidate declaration strings the regex preprocessor extracts; cheaper), or `declarationsWithContext` (those declarations to extract, plus the whole file as read-only type context). |
+| `ai.preferredModelSource` | Preferred model: `sampling` (the calling MCP client's model — Copilot supports it, Claude Code doesn't), `vscodeLm` (the editor's model, e.g. Copilot), or `claudeCli` (shells out to the `claude` CLI). Falls back to the other available sources on failure; the source actually used is reported. |
+| `ai.enableClaudeCli` | Allow the `claudeCli` model source (off by default). |
+| `ai.claudePath` | Path to the `claude` CLI for the `claudeCli` source. Empty → use `claude` on `PATH`. |
+| `ai.claudeArgs` | Extra arguments passed to the `claude` CLI (e.g. `--model`). The prompt is always sent on stdin with `-p`. |
+
+**MCP server**
+
+| Setting | Description |
+|---|---|
+| `mcp.enabled` | Run the Mockaccino MCP server so AI clients can generate mocks/stubs (default on). |
+| `mcp.port` | Localhost TCP port for the server. `0` picks a free port each start; set a fixed port if you wire it into Claude Code via `.mcp.json` so the URL stays stable across restarts. |
+| `mcp.enableClangBackend` | Allow MCP clients to use the clang backend (off by default; regex is always available over MCP). |
+| `mcp.enableAiBackend` | Allow MCP clients to use the AI backend (off by default; regex is always available over MCP). |
+
+## MCP server
+
+Mockaccino runs an in-process **MCP server** (in the extension host) that exposes the same mock/stub generation to AI clients, with two tools mirroring the palette (`generate_mock` / `generate_stub`). Each tool takes a `backend` (`regex` / `clang` / `ai`), an optional file `path` (defaults to the active editor), and an optional `outputDir`. After generating, the result reports the written file paths, the effective and configured output directories, and the comment-stripped key content of each file, so the model can act on it without a second round-trip. **Regex is always available; `clang` and `ai` are gated** by `mcp.enableClangBackend` / `mcp.enableAiBackend`.
+
+- **Copilot (agent mode)** discovers the contributed server automatically — no setup.
+- **Claude Code** does not auto-discover VS Code-contributed servers. Run **Mockaccino: add MCP server to Claude Code (.mcp.json)** to write the server entry (pointing at the in-extension HTTP endpoint) into your project's `.mcp.json`. Pin `mcp.port` so the URL stays stable. The server is only reachable while VS Code is open.
+
 ## How parsing works
 
 - **Regex backend** — the file's preprocessor directives (and any you add in settings) are evaluated, comments and function bodies are stripped, and the remaining function declarations are matched with regular expressions. No include is read and no AST is built, so it needs no knowledge of your type names and tolerates unusual C dialects. The trade-off: very unusual declarators may need a helper macro definition (or the clang backend).
 - **Clang backend** — the source is handed to `clang -ast-dump=json` (fed on stdin, so unsaved edits and `#include "sibling.h"` both work). Mockaccino reads the resulting AST and mocks only the functions **declared in the opened file** — includes are parsed for type resolution but not mocked.
+- **AI parser backend** — wherever the regex backend would match a declaration with a regular expression, this asks a language model to return the structured function list instead (the same shape the other backends produce), then renders through the identical template path. It shares the regex backend's tolerance for non-compiling input; `ai.inputMode` controls whether the model sees the whole file or just the extracted candidate declarations. The C++ class path uses the same heuristic extractor as the regex backend.
 
 clang's diagnostics (and any generation errors) are logged to a **“Mockaccino” tab in the Terminal panel** *and* to the matching **Output channel** (View → Output → *Mockaccino*). If clang reports errors, you'll get a warning that the generated mock may be incomplete and the log is brought into view with the details.
 
@@ -198,12 +229,14 @@ clang's diagnostics (and any generation errors) are logged to a **“Mockaccino�
 
 - **Regex backend:** none.
 - **Clang backend:** a `clang` executable on `PATH` or set via `mockaccino.clangPath`.
+- **AI parser backend:** a reachable language model — Copilot (or another `vscode.lm` provider), an MCP client that supports sampling, or the `claude` CLI (enable `mockaccino.ai.enableClaudeCli`).
 
 ## Scope & limitations
 
 - Mockaccino mocks **free C functions** (C-linkage symbols) and, in the same run, **C++ interface classes** (a `_mock.hpp` of gmock mock classes). The C++ class path covers namespaces, nested classes, and `const`/`noexcept`/`override` methods; **templated classes, operator overloads, and ref-qualified methods are skipped** (MVP).
-- The regex backend is heuristic by design: most signatures are handled, but exotic declarators (e.g. function-pointer parameters) may need a configured macro or the clang backend. The clang backend parses C++ classes from a real AST for exact resolution.
+- The regex backend is heuristic by design: most signatures are handled, but exotic declarators (e.g. function-pointer parameters) may need a configured macro, the AI parser, or the clang backend. The clang backend parses C++ classes from a real AST for exact resolution.
 - The clang backend needs the file — and the includes its signatures depend on — to parse.
+- The AI parser backend needs a reachable model and is non-deterministic; its output quality depends on the model. The C++ class path reuses the regex heuristic extractor.
 
 ## Links
 
