@@ -38,12 +38,16 @@ function buildReport(
 		effectiveOutputDir: string;
 		defaultOutputDir: string;
 		modelSource?: string;
+		modelSourceNotes?: string[];
 	},
 	readFile: (p: string) => string = (p) => mcpFs.readFileSync(p, 'utf8'),
 ): string {
 	const lines: string[] = [];
 	const via = opts.modelSource ? ` (model source: ${opts.modelSource})` : '';
 	lines.push(`Generated ${opts.count} ${opts.operation}(s) with the ${opts.backend} backend${via}.`);
+	for (const note of opts.modelSourceNotes || []) {
+		lines.push(`  higher-priority source skipped — ${note}`);
+	}
 	lines.push('');
 	lines.push('Files written:');
 	for (const f of opts.files) {
@@ -72,24 +76,56 @@ function buildReport(
 function chainCompletions(providers: { source: string; complete: (prompt: string) => Promise<string> }[]): {
 	complete: (prompt: string) => Promise<string>;
 	usedSource: () => string;
+	failedAttempts: () => { source: string; error: string }[];
 } {
 	let used = '';
+	let failed: { source: string; error: string }[] = [];
 	const complete = async (prompt: string): Promise<string> => {
 		const errors: string[] = [];
+		failed = [];
 		for (const provider of providers) {
 			try {
 				const result = await provider.complete(prompt);
 				used = provider.source;
 				return result;
 			} catch (err: any) {
-				errors.push(`${provider.source}: ${err && err.message ? err.message : err}`);
+				const message = err && err.message ? err.message : String(err);
+				errors.push(`${provider.source}: ${message}`);
+				failed.push({ source: provider.source, error: message });
 			}
 		}
 		throw new Error(`all AI model sources failed —\n${errors.join('\n')}`);
 	};
-	return { complete, usedSource: () => used };
+	return { complete, usedSource: () => used, failedAttempts: () => failed };
+}
+
+/* Explain why the winning model source isn't a higher-priority one: for each source
+   ranked above `used` in `order`, report whether it was excluded up front (a reason
+   in `excludedReasons`, e.g. disabled by setting or unavailable in this context) or
+   was tried and failed (`failedAttempts`). Sources ranked below the winner are
+   irrelevant and omitted. Pure — used by both the command log and the MCP report. */
+function describeModelSelection(
+	order: string[],
+	used: string,
+	excludedReasons: Record<string, string>,
+	failedAttempts: { source: string; error: string }[],
+): string[] {
+	const notes: string[] = [];
+	for (const source of order) {
+		if (source === used) {
+			break;
+		}
+		if (excludedReasons && excludedReasons[source]) {
+			notes.push(`${source}: ${excludedReasons[source]}`);
+		}
+		const failure = (failedAttempts || []).find((f) => f.source === source);
+		if (failure) {
+			notes.push(`${source}: failed — ${failure.error}`);
+		}
+	}
+	return notes;
 }
 
 if (typeof module === "object") {
-	module.exports = { allowedBackends, stripComments, buildReport, chainCompletions };
+	module.exports = { allowedBackends, stripComments, buildReport, chainCompletions, describeModelSelection };
 }

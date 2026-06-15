@@ -60,6 +60,47 @@ suite('mcp_tools.chainCompletions', () => {
 		const chain = McpTools.chainCompletions([fail('sampling', 'x'), fail('vscodeLm', 'y')]);
 		await assert.rejects(() => chain.complete('p'), /sampling: x[\s\S]*vscodeLm: y/);
 	});
+
+	test('records the attempts that failed before the winner', async () => {
+		const chain = McpTools.chainCompletions([fail('sampling', 'no sampling'), ok('claudeCli', 'B')]);
+		await chain.complete('p');
+		assert.deepStrictEqual(chain.failedAttempts(), [{ source: 'sampling', error: 'no sampling' }]);
+	});
+});
+
+suite('mcp_tools.describeModelSelection', () => {
+	test('explains an excluded higher-priority source (e.g. disabled/unavailable)', () => {
+		const notes = McpTools.describeModelSelection(
+			['sampling', 'claudeCli', 'vscodeLm'],
+			'vscodeLm',
+			{ sampling: 'disabled (set mockaccino.ai.enableSampling)', claudeCli: 'disabled (set mockaccino.ai.enableClaudeCli)' },
+			[],
+		);
+		assert.deepStrictEqual(notes, [
+			'sampling: disabled (set mockaccino.ai.enableSampling)',
+			'claudeCli: disabled (set mockaccino.ai.enableClaudeCli)',
+		]);
+	});
+
+	test('explains a higher-priority source that was tried and failed', () => {
+		const notes = McpTools.describeModelSelection(
+			['sampling', 'claudeCli'],
+			'claudeCli',
+			{},
+			[{ source: 'sampling', error: 'client has no sampling' }],
+		);
+		assert.deepStrictEqual(notes, ['sampling: failed — client has no sampling']);
+	});
+
+	test('ignores sources ranked at or below the winner', () => {
+		const notes = McpTools.describeModelSelection(
+			['sampling', 'claudeCli', 'vscodeLm'],
+			'sampling',
+			{ claudeCli: 'disabled' },
+			[],
+		);
+		assert.deepStrictEqual(notes, []);
+	});
 });
 
 suite('mcp_tools.buildReport', () => {

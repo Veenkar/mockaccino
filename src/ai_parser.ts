@@ -19,16 +19,18 @@ interface AiFunction {
 class AiParser {
 	constructor(private complete: (prompt: string) => Promise<string>) {}
 
-	/* `input` is either the whole file or just the candidate declaration strings
-	   (see the AI backend's input mode). `filename` is only used to phrase the
-	   prompt. Returns the structured functions the model reported. */
-	async parse(input: string, filename: string): Promise<AiFunction[]> {
-		const raw = await this.complete(AiParser.buildPrompt(input, filename));
+	/* `input` is the code to extract from — the whole file, or just the candidate
+	   declaration strings (see the AI backend's input mode). `filename` is only used
+	   to phrase the prompt. `context`, when given, is extra source (e.g. the whole
+	   file) the model may read to resolve types but must NOT extract from. Returns
+	   the structured functions the model reported. */
+	async parse(input: string, filename: string, context?: string): Promise<AiFunction[]> {
+		const raw = await this.complete(AiParser.buildPrompt(input, filename, context));
 		return AiParser.extractFunctions(raw);
 	}
 
-	static buildPrompt(input: string, filename: string): string {
-		return [
+	static buildPrompt(input: string, filename: string, context?: string): string {
+		const lines = [
 			`You are a C function-signature extractor. From the C code below (file "${filename}"),`,
 			`extract every function that is DECLARED or DEFINED in this file itself.`,
 			`Ignore functions that come from #include headers, and ignore function bodies.`,
@@ -42,10 +44,24 @@ class AiParser {
 			`- preserve type spelling exactly (pointers, const, struct/typedef names, arrays).`,
 			`- is_variadic: true only if the parameter list ends with "...".`,
 			`- is_static / is_extern: reflect the function's storage-class specifier.`,
-			``,
-			`C code:`,
-			input,
-		].join("\n");
+		];
+		if (typeof context === "string" && context.trim()) {
+			lines.push(
+				``,
+				`Context — the full file, for resolving types/typedefs/macros only.`,
+				`Do NOT extract functions from this context; use it only to understand the`,
+				`types referenced by the declarations to extract below.`,
+				``,
+				`Context:`,
+				context,
+				``,
+				`Declarations to extract:`,
+				input,
+			);
+		} else {
+			lines.push(``, `C code:`, input);
+		}
+		return lines.join("\n");
 	}
 
 	/* Parse the model's response into structured functions. Tolerant of common

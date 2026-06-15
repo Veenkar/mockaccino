@@ -29,21 +29,50 @@ type CompleteFn = (prompt: string) => Promise<string>;
 
 /* Build the AI `complete` provider, preferred source first then fall back through
    the rest. `samplingComplete` is supplied only in the MCP context (the calling
-   client's model); when absent, the `sampling` source is simply dropped. */
-export function buildAiComplete(config: any, samplingComplete?: CompleteFn): { complete: CompleteFn; usedSource: () => string } {
+   client's model); when absent, the `sampling` source is unavailable. The `sampling`
+   and `claudeCli` sources are each gated by a setting (off by default) — a disabled
+   or unavailable source is dropped, and `selectionNotes()` explains why a
+   lower-priority source ended up answering. */
+export function buildAiComplete(config: any, samplingComplete?: CompleteFn): {
+	complete: CompleteFn;
+	usedSource: () => string;
+	selectionNotes: () => string[];
+} {
 	const preferred: string = config.get('ai.preferredModelSource') || 'sampling';
+	const samplingEnabled = config.get('ai.enableSampling') === true;
+	const claudeCliEnabled = config.get('ai.enableClaudeCli') === true;
 	const claude = new ClaudeCliCompletion(config.get('ai.claudePath') || '', config.get('ai.claudeArgs') || []);
 
-	const available: Record<string, CompleteFn | undefined> = {
-		sampling: samplingComplete,
-		claudeCli: claude.complete,
-		vscodeLm: vscodeLmComplete,
-	};
-
 	const order = [preferred, 'sampling', 'claudeCli', 'vscodeLm'].filter((s, i, a) => a.indexOf(s) === i);
-	const providers = order
-		.filter((source) => typeof available[source] === 'function')
-		.map((source) => ({ source, complete: available[source] as CompleteFn }));
 
-	return McpTools.chainCompletions(providers);
+	// Walk the priority order, building the live provider chain and recording why any
+	// source was left out (disabled by setting / unavailable in this context).
+	const providers: { source: string; complete: CompleteFn }[] = [];
+	const excludedReasons: Record<string, string> = {};
+	for (const source of order) {
+		if (source === 'sampling') {
+			if (!samplingEnabled) {
+				excludedReasons[source] = 'disabled (set mockaccino.ai.enableSampling to use it)';
+			} else if (typeof samplingComplete !== 'function') {
+				excludedReasons[source] = 'unavailable here (no MCP sampling client — only offered when invoked from a sampling-capable client such as Copilot)';
+			} else {
+				providers.push({ source, complete: samplingComplete });
+			}
+		} else if (source === 'claudeCli') {
+			if (!claudeCliEnabled) {
+				excludedReasons[source] = 'disabled (set mockaccino.ai.enableClaudeCli to use it)';
+			} else {
+				providers.push({ source, complete: claude.complete });
+			}
+		} else {
+			providers.push({ source, complete: vscodeLmComplete });
+		}
+	}
+
+	const chain = McpTools.chainCompletions(providers);
+	return {
+		complete: chain.complete,
+		usedSource: chain.usedSource,
+		selectionNotes: () => McpTools.describeModelSelection(order, chain.usedSource(), excludedReasons, chain.failedAttempts()),
+	};
 }

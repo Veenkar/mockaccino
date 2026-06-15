@@ -156,6 +156,9 @@ async function runAiGeneration(context: vscode.ExtensionContext, operation: Oper
 		await mockaccino.prepare();
 		const result = operation === 'mock' ? mockaccino.mock() : mockaccino.stub();
 		logLine(`AI model source used: ${ai.usedSource() || '(none)'}`);
+		for (const note of ai.selectionNotes()) {
+			logLine(`  higher-priority source skipped — ${note}`);
+		}
 
 		if (result.result === 0) {
 			logLine(result.message);

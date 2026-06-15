@@ -12,9 +12,12 @@ var extractDeclarations = require("./declaration_extractor");
    model-agnostic and unit-testable with a fake `complete`.
 
    `mockaccino.ai.inputMode` selects what the model sees:
-     - "fullFile"     (default) — the whole source; the model resolves types/context.
-     - "declarations"          — only the candidate declaration strings the regex
-                                  preprocessor extracts (cheaper, mirrors regex).
+     - "fullFile"                 — the whole source; the model resolves types/context.
+     - "declarations"  (default)  — only the candidate declaration strings the regex
+                                    preprocessor extracts (cheaper, mirrors regex).
+     - "declarationsWithContext"  — the candidate declarations to extract, plus the
+                                    whole file as type context the model may read but
+                                    must not extract from.
 
    The model call is async, so callers must `await prepare()` before mock()/stub()
    (the base hooks are synchronous and read the cached function list). */
@@ -38,8 +41,8 @@ class AiMockaccino extends Mockaccino {
 		if (this.functions !== undefined) {
 			return;
 		}
-		const input = this.buildModelInput();
-		const fns = await this.parser.parse(input, this.naming.filename);
+		const { input, context } = this.buildModelInput();
+		const fns = await this.parser.parse(input, this.naming.filename, context);
 		this.functions = StructuredHelpers.filterFunctions(fns, {
 			skipStatic: this.config.get('skipStaticFunctions'),
 			skipExtern: this.config.get('skipExternFunctions'),
@@ -47,14 +50,19 @@ class AiMockaccino extends Mockaccino {
 		});
 	}
 
-	/* Whole file, or just the candidate declarations, per mockaccino.ai.inputMode. */
-	private buildModelInput(): string {
-		if (this.config.get('ai.inputMode') === 'declarations') {
+	/* What to feed the model, per mockaccino.ai.inputMode: the whole file, just the
+	   candidate declarations, or the declarations plus the whole file as type context. */
+	private buildModelInput(): { input: string; context?: string } {
+		const mode = this.config.get('ai.inputMode');
+		if (mode === 'declarations' || mode === 'declarationsWithContext') {
 			const directives = this.config.get('additionalPreprocessorDirectives') || '';
 			const lonely = this.config.get('treatLonelyPreprocIfAsActive');
-			return extractDeclarations(this.content, directives, lonely).join('\n');
+			const declarations = extractDeclarations(this.content, directives, lonely).join('\n');
+			return mode === 'declarationsWithContext'
+				? { input: declarations, context: this.content }
+				: { input: declarations };
 		}
-		return this.content;
+		return { input: this.content };
 	}
 
 	protected getMockMethodStrings(): string[] {

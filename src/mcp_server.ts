@@ -91,6 +91,7 @@ async function generate(context: vscode.ExtensionContext, mcp: any, operation: O
 	try {
 		let instance: any;
 		let modelSource: string | undefined;
+		let modelSourceNotes: string[] | undefined;
 		if (args.backend === 'clang') {
 			instance = new ClangMockaccino(content, uri, cfg, version, workspaceRoot, template_path, gatherClangIncludeDirs(workspaceRoot));
 		} else if (args.backend === 'ai') {
@@ -98,6 +99,7 @@ async function generate(context: vscode.ExtensionContext, mcp: any, operation: O
 			instance = new AiMockaccino(content, uri, cfg, version, workspaceRoot, template_path, ai.complete);
 			await instance.prepare();
 			modelSource = ai.usedSource();
+			modelSourceNotes = ai.selectionNotes();
 		} else {
 			instance = new RegexMockaccino(content, uri, cfg, version, workspaceRoot, template_path);
 		}
@@ -115,6 +117,7 @@ async function generate(context: vscode.ExtensionContext, mcp: any, operation: O
 			effectiveOutputDir: (args.outputDir || config.get('outputPath') || '') as string,
 			defaultOutputDir: (config.get('outputPath') || '') as string,
 			modelSource,
+			modelSourceNotes,
 		});
 		return { content: [{ type: 'text' as const, text: report }] };
 	} catch (err: any) {

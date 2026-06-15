@@ -110,6 +110,18 @@ suite('AiMockaccino', () => {
 		assert.ok(!model.calls[0].includes('return 42;'), 'function body is stripped');
 	});
 
+	test('inputMode "declarationsWithContext" sends declarations to extract plus the whole file as context', async () => {
+		const model = fakeModel([{ returnType: 'int', name: 'foo', params: [] }]);
+		const content = 'typedef int handle_t;\nint foo(handle_t h) {\n  return 42;\n}\n';
+		const m = new AiMockaccino(content, makeUri(path.join(tmp, 'foo.c')), makeConfig({ outputPath: tmp, 'ai.inputMode': 'declarationsWithContext' }), '1', '', TEMPLATES, model.complete);
+		await m.prepare();
+		const prompt = model.calls[0];
+		assert.ok(prompt.includes('int foo(handle_t h);'), 'declaration to extract is present');
+		assert.ok(prompt.includes('typedef int handle_t;'), 'whole file is supplied as context');
+		assert.ok(prompt.includes('return 42;'), 'context retains the full file (body included)');
+		assert.ok(/Context:/.test(prompt) && /Declarations to extract:/.test(prompt), 'prompt separates context from declarations');
+	});
+
 	test('mock()/stub() before prepare() throws a clear error', () => {
 		const model = fakeModel([]);
 		const m = new AiMockaccino('x', makeUri(path.join(tmp, 'f.c')), makeConfig({ outputPath: tmp }), '1', '', TEMPLATES, model.complete);
