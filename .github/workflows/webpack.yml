@@ -41,6 +41,15 @@ jobs:
         path: test-results/
         if-no-files-found: warn
 
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        # Contains coverage/unit and coverage/vscode (separate per-suite dirs).
+        name: coverage-node-${{ matrix.node-version }}
+        path: coverage/
+        if-no-files-found: warn
+
   integration:
     runs-on: ubuntu-latest
     needs: build
@@ -78,6 +87,16 @@ jobs:
       with:
         name: test-results-integration
         path: test-results/
+        if-no-files-found: warn
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        # Extension-code-only coverage (no C++): the C/C++ toolchain runs as
+        # non-Node subprocesses that c8 does not instrument.
+        name: coverage-integration
+        path: coverage/integration/
         if-no-files-found: warn
 
   package:

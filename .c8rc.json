@@ -1,0 +1,12 @@
+{
+	"all": false,
+	"reporter": ["text-summary", "lcov", "html"],
+	"exclude": [
+		"**/test/**",
+		"**/*.test.*",
+		"coverage/**",
+		"integration/**",
+		"esbuild.js",
+		"**/node_modules/**"
+	]
+}
