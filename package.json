@@ -121,12 +121,12 @@
             "cpp"
           ],
           "default": "cc",
-          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The C mock header stays .h and the C++ class mock stays .hpp."
+          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The generated mock header always stays .h."
         },
         "mockaccino.cpp.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Also generate gmock mock classes (a _mock.hpp) for C++ interfaces found in the file, alongside the C-function mocks. The mock command always does both; turn this off to skip the C++ class path."
+          "description": "Also generate gmock mock classes for C++ interfaces found in the file (into the same _mock.h), alongside the C-function mocks. The mock command always does both; turn this off to skip the C++ class path."
         },
         "mockaccino.cpp.onlyVirtualOrInterfaceClasses": {
           "type": "boolean",

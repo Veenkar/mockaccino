@@ -2,7 +2,7 @@
 #define SINK_HPP
 
 /* A C++ interface (plus a small consumer) exercised by the C++ class-mock path of
-   the integration suite. Mockaccino generates `sink_mock.hpp` from this with both
+   the integration suite. Mockaccino generates `sink_mock.h` from this with both
    backends; the test mocks ISink, sets EXPECT_CALLs, and drives run_pipeline. */
 
 namespace metrics {

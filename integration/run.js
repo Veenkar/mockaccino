@@ -118,7 +118,7 @@ console.log('[integration] 2/5 Generating mocks with Mockaccino (regex + clang).
 	};
 
 	// Generate the C++ class mock (sink.hpp) with one backend — mock only (gmock
-	// classes have no stub). Produces <name>_mock.hpp.
+	// classes have no stub). Produces <name>_mock.h.
 	const generateCppWith = (BackendClass, outDir, label) => {
 		fs.mkdirSync(outDir, { recursive: true });
 		const log = console.log;

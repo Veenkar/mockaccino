@@ -22,9 +22,8 @@ suite('Naming source extension and C++ mock path', () => {
 		assert.strictEqual(n.sourceExt, 'cc');
 	});
 
-	test('mock header stays .h and the C++ class mock is .hpp', () => {
+	test('the single mock header stays .h regardless of input extension', () => {
 		const n = new Naming('/proj/foo.hpp', 'cpp');
 		assert.ok(n.defaultMockHeaderPath.endsWith('foo_mock.h'));
-		assert.ok(n.defaultCppMockHeaderPath.endsWith('foo_mock.hpp'));
 	});
 });

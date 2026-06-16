@@ -14,12 +14,10 @@ class Naming {
 	readonly defaultMockHeaderPath: string;
 	readonly defaultMockSrcPath: string;
 	readonly defaultStubSrcPath: string;
-	readonly defaultCppMockHeaderPath: string;
 	readonly sourceExt: string;
 
 	/* `sourceExt` ("cc" | "cpp") is the extension for the generated C-wrapper source
-	   files (mockaccino.mockSourceExtension); the headers stay .h, the C++ class mock
-	   stays .hpp. */
+	   files (mockaccino.mockSourceExtension); every generated header stays .h. */
 	constructor(fsPath: string, sourceExt: string = "cc") {
 		this.path = fsPath;
 
@@ -30,7 +28,6 @@ class Naming {
 		this.defaultMockHeaderPath = extIndex !== -1 ? base + '_mock' + ".h" : fsPath + '_mock';
 		this.defaultMockSrcPath = extIndex !== -1 ? base + '_mock' + "." + ext : fsPath + '_mock';
 		this.defaultStubSrcPath = extIndex !== -1 ? base + '_stub' + "." + ext : fsPath + '_stub';
-		this.defaultCppMockHeaderPath = extIndex !== -1 ? base + '_mock' + ".hpp" : fsPath + '_mock';
 
 		const pathParts = fsPath.split(/[\\/]/);
 		this.filename = pathParts[pathParts.length - 1];

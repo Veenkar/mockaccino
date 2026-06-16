@@ -1,7 +1,7 @@
-#ifndef ${instance.caps_name}_MOCK_HPP
-#define ${instance.caps_name}_MOCK_HPP
+#ifndef IFACE_MOCK_H
+#define IFACE_MOCK_H
 /*===========================================================================*
- * ${instance.name} C++ class mocks generated with:
+ * iface mock generated with:
  *
  *  _____ ______   ________  ________  ___  __    ________
  * |\   _ \  _   \|\   __  \|\   ____\|\  \|\  \ |\   __  \
@@ -21,16 +21,19 @@
  */
 /**
  * DESCRIPTION:
- * gmock mock classes for the C++ interfaces declared in ${instance.filename}.
+ * Mock code for iface.
  *
  * GENERATOR: Mockaccino
- * MODE: ${instance.mode}
- * VERSION: v${instance.version}
- * INPUT: ${instance.filename}
- * TIME: ${instance.localTime}
+ * MODE: regex
+ * VERSION: v2.0.2
+ * INPUT: iface.hpp
+ * TIME: 2026-06-16 21:58:32
  *
  * COPYRIGHT:
-${instance.copyright}
+ * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
+ *
+ * WARNING:
+ * PLEASE REPLACE COPYRIGHT STATEMENT IN MOCKACCINO SETTINGS!
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
@@ -40,20 +43,37 @@ ${instance.copyright}
  * Include headers
  *===========================================================================*/
 #include <gmock/gmock.h>
-#include "${instance.filename}"
+#include "iface.hpp"
 
 /*===========================================================================*
  * Mock class declarations
  *===========================================================================*/
-${mock_classes}
+class app_Sensor_Mock : public app::Sensor {
+public:
+	MOCK_METHOD(int, read, (), (const, override));
+	MOCK_METHOD(void, calibrate, (double), (override));
+};
+
+class app_Devices_IClock_Mock : public app::Devices::IClock {
+public:
+	MOCK_METHOD(unsigned long, now, (), (override, noexcept));
+	MOCK_METHOD(void, reset, (), (override));
+};
 
 /*===========================================================================*/
 /**
+ * DESCRIPTION:
+ * Mock code for iface.
+ *
  * GENERATOR: Mockaccino
- * MODE: ${instance.mode}
- * VERSION: v${instance.version}
- * INPUT: ${instance.filename}
- * TIME: ${instance.localTime}
+ * MODE: regex
+ * VERSION: v2.0.2
+ * INPUT: iface.hpp
+ * TIME: 2026-06-16 21:58:32
+ *
+ * WARNING:
+ * THIS IS AN AUTOMATICALLY GENERATED FILE.
+ * Editing it manually might result in loss of changes.
  *
  * The Mockaccino extension can be found at:
  * MARKETPLACE:
@@ -63,4 +83,4 @@ ${mock_classes}
  * https://github.com/Veenkar/mockaccino
  *
  *===========================================================================*/
-#endif /* ${instance.caps_name}_MOCK_HPP */
+#endif /* IFACE_MOCK_H */

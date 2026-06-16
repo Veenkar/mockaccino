@@ -25,9 +25,9 @@
  *
  * GENERATOR: Mockaccino
  * MODE: regex
- * VERSION: v1.10.1
+ * VERSION: v2.0.2
  * INPUT: ker.c
- * TIME: 2026-06-13 19:26:15
+ * TIME: 2026-06-16 21:58:32
  *
  * COPYRIGHT:
  * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
@@ -43,9 +43,13 @@
  * Include headers
  *===========================================================================*/
 #include <gmock/gmock.h>
+#ifdef __cplusplus
 extern "C" {
-	#include "ker.h"
+#endif
+#include "ker.h"
+#ifdef __cplusplus
 }
+#endif
 
 /*===========================================================================*
  * Mock class declaration
@@ -65,9 +69,9 @@ public:
  *
  * GENERATOR: Mockaccino
  * MODE: regex
- * VERSION: v1.10.1
+ * VERSION: v2.0.2
  * INPUT: ker.c
- * TIME: 2026-06-13 19:26:15
+ * TIME: 2026-06-16 21:58:32
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.

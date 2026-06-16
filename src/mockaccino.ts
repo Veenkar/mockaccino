@@ -111,31 +111,32 @@ abstract class Mockaccino {
 			return this.notAFileResult();
 		}
 
-		const files: string[] = [];
-
-		// C functions, the original way — only emit the .h/.cc when there are any, so
-		// a header that holds only C++ classes doesn't litter empty C mock files.
-		const mock_strings_list = this.getMockMethodStrings();
-		if (mock_strings_list.length > 0) {
-			const mock_strings = mock_strings_list.join("\n");
-			const impl_strings = this.getMockImplStrings().join("\n");
-			console.log("mock strings:");
-			console.log(mock_strings);
-			const header = this.renderer.renderMockHeader(mock_strings);
-			const src = this.renderer.renderMockSrc(impl_strings);
-			files.push(...this.writer.writeMock(header, src));
-		}
-
-		// C++ classes, the gmock way — a single _mock.hpp, only when classes were found.
-		const cpp_class_strings = this.getCppMockClassStrings();
-		if (cpp_class_strings.length > 0) {
-			const cppHeader = this.renderer.renderCppMockHeader(cpp_class_strings.join("\n\n"));
-			files.push(...this.writer.writeCppMock(cppHeader));
-		}
-
-		if (files.length === 0) {
+		// Everything lands in a single header (`_mock.h`): the C mock class (only
+		// when there are C free functions) and the gmock C++ class mocks (only when
+		// the file declares mockable C++ interfaces). The companion `.cc` is written
+		// only for the C path, since the C++ class mocks are header-only.
+		const mock_strings_list = this.getMockMethodStrings();   // C MOCK_METHOD entries
+		const cpp_class_strings = this.getCppMockClassStrings();  // C++ mock-class blocks
+		if (mock_strings_list.length === 0 && cpp_class_strings.length === 0) {
 			return this.emptyContentResult();
 		}
+
+		const files: string[] = [];
+		const mock_strings = mock_strings_list.join("\n");
+		const mock_classes = cpp_class_strings.join("\n\n");
+		console.log("mock strings:");
+		console.log(mock_strings);
+		console.log("mock classes:");
+		console.log(mock_classes);
+
+		const header = this.renderer.renderMockHeader(mock_strings, mock_classes);
+		files.push(...this.writer.writeMockHeader(header));
+
+		if (mock_strings_list.length > 0) {
+			const src = this.renderer.renderMockSrc(this.getMockImplStrings().join("\n"));
+			files.push(...this.writer.writeMockSrc(src));
+		}
+
 		this.files_written = files;
 		this.file_written = files[0];
 

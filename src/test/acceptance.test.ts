@@ -61,8 +61,7 @@ function discoverCases(root: string): FixtureCase[] {
 			name,
 			expectedDir,
 			hasMock: fs.existsSync(path.join(expectedDir, `${name}_mock.h`))
-				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`))
-				|| fs.existsSync(path.join(expectedDir, `${name}_mock.hpp`)),
+				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`)),
 			hasStub: fs.existsSync(path.join(expectedDir, `${name}_stub.cc`)),
 		});
 	}
@@ -124,7 +123,7 @@ suite('Acceptance (commands + golden files)', () => {
 			if (c.hasMock) {
 				test('mock', async () => {
 					await vscode.commands.executeCommand('mockaccino.mockCurrentFile');
-					compareGenerated(c, ['_mock.h', '_mock.cc', '_mock.hpp']);
+					compareGenerated(c, ['_mock.h', '_mock.cc']);
 				});
 			}
 			if (c.hasStub) {
@@ -140,7 +139,7 @@ suite('Acceptance (commands + golden files)', () => {
 			if (c.hasMock) {
 				test('mockFile (by uri)', async () => {
 					await vscode.commands.executeCommand('mockaccino.mockFile', vscode.Uri.file(c.inputPath));
-					compareGenerated(c, ['_mock.h', '_mock.cc', '_mock.hpp']);
+					compareGenerated(c, ['_mock.h', '_mock.cc']);
 				});
 			}
 			if (c.hasStub) {

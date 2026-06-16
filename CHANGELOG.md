@@ -4,6 +4,17 @@ All notable changes to the "mockaccino" extension are documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **Single mock header.** The `mock` command now writes all mock declarations into
+  one `_mock.h` instead of a separate `_mock.hpp` for C++ classes. A file with both
+  C free functions and C++ interfaces produces one header (C mock class + gmock
+  class mocks) plus the C wrapper `_mock.cc`; a pure-C++ interface file produces just
+  `_mock.h`. The original header is included via `#ifdef __cplusplus`-guarded
+  `extern "C"` for pure-C inputs, or a plain `#include` once C++ classes are present.
+
 ## [2.0.0] - 2026-06-15
 
 ### Added

@@ -27,7 +27,7 @@
  * MODE: regex
  * VERSION: v2.0.2
  * INPUT: mixed.hpp
- * TIME: 2026-06-15 23:44:34
+ * TIME: 2026-06-16 21:58:32
  *
  * COPYRIGHT:
  * Copyright (c) 2026 [INPUT FILE OWNER]. All rights reserved.
@@ -43,9 +43,7 @@
  * Include headers
  *===========================================================================*/
 #include <gmock/gmock.h>
-extern "C" {
-	#include "mixed.h"
-}
+#include "mixed.hpp"
 
 /*===========================================================================*
  * Mock class declaration
@@ -59,6 +57,15 @@ public:
 	MOCK_METHOD(double, scale_value, (double, int));
 };
 
+/*===========================================================================*
+ * Mock class declarations
+ *===========================================================================*/
+class telemetry_ITransport_Mock : public telemetry::ITransport {
+public:
+	MOCK_METHOD(bool, send, (const char *, unsigned long), (override));
+	MOCK_METHOD(int, poll, (), (const, override));
+};
+
 /*===========================================================================*/
 /**
  * DESCRIPTION:
@@ -68,7 +75,7 @@ public:
  * MODE: regex
  * VERSION: v2.0.2
  * INPUT: mixed.hpp
- * TIME: 2026-06-15 23:44:34
+ * TIME: 2026-06-16 21:58:32
  *
  * WARNING:
  * THIS IS AN AUTOMATICALLY GENERATED FILE.
