@@ -26,4 +26,9 @@ jobs:
       run: |
         npm install
         npm run compile
-        npm run test
+
+    - name: Run unit tests
+      run: npm run test:unit
+
+    - name: Run VS Code tests (headless)
+      run: xvfb-run -a npm run test
