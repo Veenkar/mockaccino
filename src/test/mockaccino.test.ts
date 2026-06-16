@@ -100,6 +100,24 @@ suite('Mockaccino', () => {
 			assert.ok(src.includes('Foo_Mock::Foo_Mock()'), 'src defines the constructor');
 			assert.ok(src.includes('foo_mock_->foo(a)'), 'src forwards the call to the mock instance');
 		});
+
+		test('honors mockHeaderExtension=hpp for the header file, guard, and .cc include', () => {
+			const content = 'int foo(int a) {\n  return a;\n}\n';
+			const m = new RegexMockaccino(
+				content, makeUri(path.join(tmp, 'foo.c')),
+				makeConfig({ outputPath: tmp, mockHeaderExtension: 'hpp' }), '1.2.3', '', TEMPLATES
+			);
+			assert.strictEqual(m.mock().result, 0);
+
+			assert.ok(fs.existsSync(path.join(tmp, 'foo_mock.hpp')), 'writes a .hpp header');
+			assert.ok(!fs.existsSync(path.join(tmp, 'foo_mock.h')), 'does not write a .h header');
+
+			const header = fs.readFileSync(path.join(tmp, 'foo_mock.hpp'), 'utf8');
+			assert.ok(header.includes('#ifndef FOO_MOCK_HPP'), 'include guard follows the extension');
+
+			const src = fs.readFileSync(path.join(tmp, 'foo_mock.cc'), 'utf8');
+			assert.ok(src.includes('#include "foo_mock.hpp"'), '.cc includes the .hpp header');
+		});
 	});
 
 	suite('stub generation', () => {

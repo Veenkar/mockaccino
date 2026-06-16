@@ -166,7 +166,8 @@ All settings live under `mockaccino.*` in VS Code settings.
 | `skipFunctionsWithImplicitReturnType` | Skip functions with an implicit (`int`) return — these are often function-like macros. |
 | `disableDoubleMocking` | Don't mock files that already contain `_mock` / `_stub` in their name. |
 | `copyright` | Copyright notice inserted into generated files (`$YEAR` is expanded). |
-| `mockSourceExtension` | Extension for the generated C-wrapper source files (`_mock` / `_stub`): `cc` (default) or `cpp`. The generated mock header always stays `.h`. |
+| `mockSourceExtension` | Extension for the generated C-wrapper source files (`_mock` / `_stub`): `cc` (default) or `cpp`. |
+| `mockHeaderExtension` | Extension for the generated mock header (`_mock`): `h` (default) or `hpp`. The include guard and the `#include` in the generated `_mock` source follow it. |
 
 **C++ class mocks**
 

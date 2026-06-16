@@ -121,7 +121,16 @@
             "cpp"
           ],
           "default": "cc",
-          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The generated mock header always stays .h."
+          "description": "Extension for the generated C-wrapper source files (_mock and _stub). The generated mock header extension is set by mockHeaderExtension."
+        },
+        "mockaccino.mockHeaderExtension": {
+          "type": "string",
+          "enum": [
+            "h",
+            "hpp"
+          ],
+          "default": "h",
+          "description": "Extension for the generated mock header file (_mock): 'h' (default) or 'hpp'. The include guard and the #include in the generated _mock source follow this extension."
         },
         "mockaccino.cpp.enabled": {
           "type": "boolean",

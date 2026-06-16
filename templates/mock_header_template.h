@@ -1,5 +1,5 @@
-#ifndef ${instance.caps_mock_name}_H
-#define ${instance.caps_mock_name}_H
+#ifndef ${instance.mock_header_guard}
+#define ${instance.mock_header_guard}
 /*===========================================================================*
  * ${instance.name} ${header_type_name_lower} generated with:
  *
@@ -66,4 +66,4 @@ ${mock_body}
  * https://github.com/Veenkar/mockaccino
  *
  *===========================================================================*/
-#endif /* ${instance.caps_mock_name}_H */
+#endif /* ${instance.mock_header_guard} */

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- **`mockHeaderExtension` setting** — choose the generated mock header's extension,
+  `h` (default) or `hpp`. It drives the output filename, the include-guard suffix
+  (`_H` / `_HPP`), and the `#include` in the generated `_mock` source.
+
 ### Changed
 
 - **Single mock header.** The `mock` command now writes all mock declarations into

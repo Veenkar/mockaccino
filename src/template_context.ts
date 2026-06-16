@@ -13,6 +13,8 @@ class TemplateContext {
 	readonly mock_instance_name: string;
 	readonly caps_mock_name: string;
 	readonly caps_stub_name: string;
+	readonly mock_header_name: string;
+	readonly mock_header_guard: string;
 	readonly filename: string;
 	readonly version: string;
 	readonly localTime: string;
@@ -27,6 +29,8 @@ class TemplateContext {
 		this.mock_instance_name = naming.mock_instance_name;
 		this.caps_mock_name = naming.caps_mock_name;
 		this.caps_stub_name = naming.caps_stub_name;
+		this.mock_header_name = naming.mock_header_name;
+		this.mock_header_guard = naming.mock_header_guard;
 		this.filename = naming.filename;
 		this.version = version;
 		this.localTime = localTime;

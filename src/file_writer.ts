@@ -9,7 +9,7 @@ class FileWriter {
 	/* The single mock header (`_mock.h`): holds the C mock class and/or the gmock
 	   C++ class mocks. Always written when there is anything to mock. */
 	writeMockHeader(header: string): string[] {
-		const headerPath = this.resolve(this.naming.name + '_mock.h', this.naming.defaultMockHeaderPath);
+		const headerPath = this.resolve(this.naming.mock_header_name, this.naming.defaultMockHeaderPath);
 		console.log(`Writing mock header to: ${headerPath}`);
 		fs.writeFileSync(headerPath, header, { flag: 'w' });
 		return [headerPath];

@@ -39,7 +39,7 @@ ${instance.copyright}
  * Include headers
  *===========================================================================*/
 #include <cassert>
-#include "${instance.name}_mock.h"
+#include "${instance.mock_header_name}"
 
 /*===========================================================================*
  * Define macros

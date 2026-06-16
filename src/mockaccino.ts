@@ -37,7 +37,7 @@ abstract class Mockaccino {
 		this.uri = uri;
 
 		const { localTime, copyright } = this.buildDocMetadata();
-		this.naming = new Naming(this.uri.fsPath, this.config.get('mockSourceExtension'));
+		this.naming = new Naming(this.uri.fsPath, this.config.get('mockSourceExtension'), this.config.get('mockHeaderExtension'));
 		this.context = new TemplateContext(this.naming, version, localTime, copyright, mode);
 
 		const output_path = this.resolveOutputPath(workspace_folder);
