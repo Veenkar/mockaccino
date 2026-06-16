@@ -208,7 +208,14 @@ console.log('[integration] 3/5 Configuring + building (cmake + clang)...');
 // --- 4. run the gmock unit tests ----------------------------------------------
 console.log('[integration] 4/5 Running gmock unit tests (ctest)...');
 {
-	const res = run('ctest', ['--test-dir', buildDir, '--output-on-failure']);
+	// JUnit XML report (ctest >= 3.21) for CI artifacts; harmless locally.
+	const resultsDir = path.join(repoRoot, 'test-results');
+	fs.mkdirSync(resultsDir, { recursive: true });
+	const res = run('ctest', [
+		'--test-dir', buildDir,
+		'--output-on-failure',
+		'--output-junit', path.join(resultsDir, 'integration.xml'),
+	]);
 	if (res.status !== 0) {
 		fail('unit tests failed');
 	}

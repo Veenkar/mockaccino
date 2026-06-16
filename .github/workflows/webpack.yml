@@ -33,6 +33,14 @@ jobs:
     - name: Run VS Code tests (headless)
       run: xvfb-run -a npm run test
 
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-node-${{ matrix.node-version }}
+        path: test-results/
+        if-no-files-found: warn
+
   integration:
     runs-on: ubuntu-latest
     needs: build
@@ -63,6 +71,14 @@ jobs:
 
     - name: Run integration suite (compiles + runs generated mocks)
       run: npm run test:integration
+
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-integration
+        path: test-results/
+        if-no-files-found: warn
 
   package:
     runs-on: ubuntu-latest
