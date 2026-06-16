@@ -249,6 +249,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test --coverage --coverage-output coverage/vscode",
+    "posttest": "node scripts/filter-vscode-coverage.mjs",
     "test:unit": "tsc -p . --outDir out && c8 --reports-dir coverage/unit mocha --ui tdd \"out/test/**/*.test.js\" --exclude \"out/test/extension.test.js\" --exclude \"out/test/acceptance.test.js\" --reporter mocha-multi-reporters --reporter-options configFile=.mocharc-reporters.unit.json",
     "test:integration": "c8 --reports-dir coverage/integration node integration/run.js"
   },

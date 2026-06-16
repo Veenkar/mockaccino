@@ -22,6 +22,9 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Install lcov (for genhtml coverage report)
+      run: sudo apt-get update && sudo apt-get install -y lcov
+
     - name: Build
       run: |
         npm install
