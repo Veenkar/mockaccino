@@ -34,12 +34,18 @@ interface FixtureCase {
 	inputBasename: string;
 	name: string;          // basename without extension, e.g. "main"
 	expectedDir: string;
+	configOverrides: Record<string, any>;
 	hasMock: boolean;
 	hasStub: boolean;
 }
 
-// Each subfolder of fixtures/ is a case: a single input file at its root plus an
-// expected/ folder holding the golden <name>_mock.h / _mock.cc / _stub.cc.
+// The single C/C++ source file at a case-folder root (everything else there —
+// e.g. an optional config.json — is metadata, not the input to mock).
+const SOURCE_EXT = /\.(c|h|hpp|hh|hxx|cc|cpp|cxx)$/i;
+
+// Each subfolder of fixtures/ is a case: a single input file at its root, an
+// optional config.json of mockaccino.* setting overrides, and an expected/ folder
+// holding the golden <name>_mock.{h,hpp} / _mock.cc / _stub.cc.
 function discoverCases(root: string): FixtureCase[] {
 	const cases: FixtureCase[] = [];
 	for (const dirent of fs.readdirSync(root, { withFileTypes: true })) {
@@ -48,19 +54,25 @@ function discoverCases(root: string): FixtureCase[] {
 		}
 		const caseDir = path.join(root, dirent.name);
 		const inputName = fs.readdirSync(caseDir, { withFileTypes: true })
-			.find((e) => e.isFile())?.name;
+			.find((e) => e.isFile() && SOURCE_EXT.test(e.name))?.name;
 		if (!inputName) {
 			continue;
 		}
 		const name = inputName.replace(/\.[^.]+$/, '');
 		const expectedDir = path.join(caseDir, 'expected');
+		const configPath = path.join(caseDir, 'config.json');
+		const configOverrides = fs.existsSync(configPath)
+			? JSON.parse(fs.readFileSync(configPath, 'utf8'))
+			: {};
 		cases.push({
 			caseName: dirent.name,
 			inputPath: path.join(caseDir, inputName),
 			inputBasename: inputName,
 			name,
 			expectedDir,
+			configOverrides,
 			hasMock: fs.existsSync(path.join(expectedDir, `${name}_mock.h`))
+				|| fs.existsSync(path.join(expectedDir, `${name}_mock.hpp`))
 				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`)),
 			hasStub: fs.existsSync(path.join(expectedDir, `${name}_stub.cc`)),
 		});
@@ -78,10 +90,13 @@ suite('Acceptance (commands + golden files)', () => {
 		await ext.activate();
 	});
 
-	async function pinConfig(outputPath: string) {
+	async function pinConfig(outputPath: string, overrides: Record<string, any> = {}) {
 		const cfg = vscode.workspace.getConfiguration('mockaccino');
 		for (const key of configKeys) {
-			const value = key === 'outputPath' ? outputPath : configProps[`mockaccino.${key}`].default;
+			let value = key === 'outputPath' ? outputPath : configProps[`mockaccino.${key}`].default;
+			if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+				value = overrides[key];
+			}
 			await cfg.update(key, value, vscode.ConfigurationTarget.Global);
 		}
 	}
@@ -111,7 +126,7 @@ suite('Acceptance (commands + golden files)', () => {
 		suite(`${c.caseName} (${c.inputBasename})`, () => {
 			setup(async () => {
 				tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mockaccino-acc-'));
-				await pinConfig(tmpDir);
+				await pinConfig(tmpDir, c.configOverrides);
 				const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(c.inputPath));
 				await vscode.window.showTextDocument(doc);
 			});
@@ -123,7 +138,7 @@ suite('Acceptance (commands + golden files)', () => {
 			if (c.hasMock) {
 				test('mock', async () => {
 					await vscode.commands.executeCommand('mockaccino.mockCurrentFile');
-					compareGenerated(c, ['_mock.h', '_mock.cc']);
+					compareGenerated(c, ['_mock.h', '_mock.hpp', '_mock.cc']);
 				});
 			}
 			if (c.hasStub) {
@@ -139,7 +154,7 @@ suite('Acceptance (commands + golden files)', () => {
 			if (c.hasMock) {
 				test('mockFile (by uri)', async () => {
 					await vscode.commands.executeCommand('mockaccino.mockFile', vscode.Uri.file(c.inputPath));
-					compareGenerated(c, ['_mock.h', '_mock.cc']);
+					compareGenerated(c, ['_mock.h', '_mock.hpp', '_mock.cc']);
 				});
 			}
 			if (c.hasStub) {
