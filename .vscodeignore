@@ -19,3 +19,15 @@ scripts/**
 lic/**
 CLAUDE.md
 MCP_PLAN.md
+
+# Test/coverage build artifacts (c8 + reporters) — never ship in the VSIX
+tests/**
+.c8rc.json
+.mocharc-reporters.unit.json
+
+# Local dev config, not part of the extension
+.mcp.json
+.vscode-test.mjs
+
+# Built packages
+*.vsix
