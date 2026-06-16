@@ -12,7 +12,10 @@ export default defineConfig({
 	// not a per-test-config key, so it must live here to be honored.
 	tests: [
 		{
-			files: 'out/test/**/*.test.js',
+			// Only the tests that need the real vscode API run in the Electron
+			// host (the "acceptance" suite); the pure-module tests run far faster
+			// under plain mocha in `npm run test:unit`.
+			files: ['out/test/acceptance.test.js', 'out/test/extension.test.js'],
 			// Sources dir used to scope/remap coverage back to TypeScript.
 			srcDir: 'src',
 			// Acceptance tests run the real commands in the Electron host and do
@@ -27,8 +30,8 @@ export default defineConfig({
 				reporterOptions: {
 					reporterEnabled: 'spec, mocha-junit-reporter',
 					mochaJunitReporterReporterOptions: {
-						mochaFile: join(repoRoot, 'test-results', 'vscode.xml'),
-						testsuitesTitle: 'mockaccino VS Code tests',
+						mochaFile: join(repoRoot, 'tests', 'acceptance', 'report', 'results.xml'),
+						testsuitesTitle: 'mockaccino acceptance tests',
 					},
 				},
 			},
@@ -36,8 +39,8 @@ export default defineConfig({
 	],
 	// V8 coverage of the extension code exercised in the Electron host, mapped
 	// back to TypeScript via source maps. Enabled with `vscode-test --coverage`;
-	// the output dir is passed on the CLI (--coverage-output coverage/vscode),
-	// since this version ignores a coverage.output config field.
+	// the output dir is passed on the CLI (--coverage-output tests/acceptance/
+	// coverage), since this version ignores a coverage.output config field.
 	coverage: {
 		reporter: ['text-summary', 'lcov', 'html'],
 		exclude: ['**/test/**', '**/node_modules/**'],

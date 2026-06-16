@@ -13,7 +13,7 @@ import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const dir = process.argv[2] || join('coverage', 'vscode');
+const dir = process.argv[2] || join('tests', 'acceptance', 'coverage');
 const lcovPath = join(dir, 'lcov.info');
 
 if (!existsSync(lcovPath)) {
