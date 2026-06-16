@@ -21,7 +21,8 @@ class Interpolator {
 // const result = interpolator.interpolate(template);
 // console.log(result);
 
-if(typeof module == "object")
+if (typeof module === "object") {
 	module.exports = Interpolator;
+}
 
 

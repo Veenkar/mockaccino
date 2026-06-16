@@ -72,8 +72,11 @@ class Preprocessor
 			const len = input.length;
 
 			while (i < len && braceCount > 0) {
-				if (input[i] === '{') braceCount++;
-				else if (input[i] === '}') braceCount--;
+				if (input[i] === '{') {
+					braceCount++;
+				} else if (input[i] === '}') {
+					braceCount--;
+				}
 				i++;
 			}
 
@@ -197,8 +200,12 @@ class Preprocessor
 		const evalExpr = (expr: string): boolean => {
 			// Replace macro names with their values
 			const replaced = expr.replace(/\b([A-Za-z_][A-Za-z0-9_]*)\b/g, (m) => {
-				if (macros[m] !== undefined && typeof macros[m] === 'string') return macros[m];
-				if (macros[m] !== undefined && typeof macros[m] === 'boolean') return macros[m] ? '1' : '0';
+				if (macros[m] !== undefined && typeof macros[m] === 'string') {
+					return macros[m];
+				}
+				if (macros[m] !== undefined && typeof macros[m] === 'boolean') {
+					return macros[m] ? '1' : '0';
+				}
 				return m;
 			});
 			// Handle defined(MACRO) and defined MACRO
@@ -317,5 +324,6 @@ class Preprocessor
 	}
 }
 
-if(typeof module == "object")
+if (typeof module === "object") {
 	module.exports = Preprocessor;
+}
