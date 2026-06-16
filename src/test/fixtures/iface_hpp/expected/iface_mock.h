@@ -46,7 +46,7 @@
 #include "iface.hpp"
 
 /*===========================================================================*
- * Mock class declarations
+ * Mock class declarations for interfaces
  *===========================================================================*/
 class app_Sensor_Mock : public app::Sensor {
 public:

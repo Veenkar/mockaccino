@@ -60,7 +60,7 @@ class TemplateRenderer {
 		if (mock_strings) {
 			const m = this.context.mock_name;
 			sections.push(
-				`${banner('Mock class declaration')}\n`
+				`${banner('Mock class declarations for global functions')}\n`
 				+ `class ${m} {\n`
 				+ `public:\n`
 				+ `\t${m}();\n`
@@ -70,7 +70,7 @@ class TemplateRenderer {
 			);
 		}
 		if (mock_classes) {
-			sections.push(`${banner('Mock class declarations')}\n${mock_classes}`);
+			sections.push(`${banner('Mock class declarations for interfaces')}\n${mock_classes}`);
 		}
 		return sections.join('\n\n');
 	}

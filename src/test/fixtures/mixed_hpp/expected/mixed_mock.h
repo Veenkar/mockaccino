@@ -46,7 +46,7 @@
 #include "mixed.hpp"
 
 /*===========================================================================*
- * Mock class declaration
+ * Mock class declarations for global functions
  *===========================================================================*/
 class Mixed_Mock {
 public:
@@ -58,7 +58,7 @@ public:
 };
 
 /*===========================================================================*
- * Mock class declarations
+ * Mock class declarations for interfaces
  *===========================================================================*/
 class telemetry_ITransport_Mock : public telemetry::ITransport {
 public:

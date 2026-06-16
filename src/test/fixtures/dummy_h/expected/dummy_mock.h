@@ -52,7 +52,7 @@ extern "C" {
 #endif
 
 /*===========================================================================*
- * Mock class declaration
+ * Mock class declarations for global functions
  *===========================================================================*/
 class Dummy_Mock {
 public:
