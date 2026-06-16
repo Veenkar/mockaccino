@@ -33,6 +33,37 @@ jobs:
     - name: Run VS Code tests (headless)
       run: xvfb-run -a npm run test
 
+  integration:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+
+    - name: Install C/C++ toolchain
+      # clang and cmake are preinstalled on ubuntu-latest; ninja is not.
+      run: sudo apt-get update && sudo apt-get install -y ninja-build clang cmake
+
+    - name: Cache GoogleTest (FetchContent download)
+      # FetchContent unpacks the pinned GoogleTest into build/_deps; caching it
+      # avoids re-downloading the archive on every run. Keyed on the CMakeLists
+      # (which pins the gtest version), so a version bump busts the cache.
+      uses: actions/cache@v4
+      with:
+        path: integration/build/_deps
+        key: gtest-${{ runner.os }}-${{ hashFiles('integration/CMakeLists.txt') }}
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run integration suite (compiles + runs generated mocks)
+      run: npm run test:integration
+
   package:
     runs-on: ubuntu-latest
     needs: build
