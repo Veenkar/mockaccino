@@ -134,6 +134,82 @@ function generate(context: vscode.ExtensionContext, BackendClass: any, operation
 	}
 }
 
+// "Mock current file inline" — generate the C++ class mocks for the active
+// editor and inject them into the file itself (behind an #ifdef test guard,
+// between BEGIN/END markers), instead of writing a separate _mock.h.
+async function runInlineCurrent(context: vscode.ExtensionContext) {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showWarningMessage('No active editor found.');
+		return;
+	}
+	await runInline(context, editor.document.uri, editor.document.getText(), editor);
+}
+
+// "Mock a file inline" — point at a file (palette/explorer) instead of the active
+// editor; edits its open buffer if one exists, otherwise writes to disk.
+async function runInlineFile(context: vscode.ExtensionContext, uri?: vscode.Uri) {
+	const source = await pickAndReadFile('mock', uri);
+	if (!source) {
+		return;
+	}
+	const open = vscode.window.visibleTextEditors.find(
+		(e) => e.document.uri.toString() === source.uri.toString()
+	);
+	await runInline(context, source.uri, open ? open.document.getText() : source.content, open);
+}
+
+// Inline generation core: build the regex backend, render+inject the C++ class
+// mocks into the source, then apply the rewritten content (an undoable editor
+// edit when the file is open, else a write to disk).
+async function runInline(context: vscode.ExtensionContext, uri: vscode.Uri, content: string, editor?: vscode.TextEditor) {
+	const config = vscode.workspace.getConfiguration('mockaccino');
+	const version = context.extension.packageJSON.version;
+	let wf = '';
+	if (vscode.workspace.workspaceFolders !== undefined) {
+		wf = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	const template_path = context.asAbsolutePath(path.join('templates'));
+
+	logLine(`[${new Date().toISOString()}] mock (inline) ${uri.fsPath}`);
+	try {
+		const mockaccino = new RegexMockaccino(content, uri, config, version, wf, template_path, []);
+		const result = mockaccino.mockInline(content);
+
+		if (result.result === 0 && result.changed) {
+			await applyInline(uri, content, result.content, editor);
+			logLine(result.message);
+			vscode.window.showInformationMessage(`Mockaccino: ${result.message}`);
+		} else if (result.result === 1) {
+			logLine(result.message);
+			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
+		} else {
+			logLine(result.message);
+			vscode.window.showWarningMessage(`Mockaccino: ${result.message}`);
+		}
+	} catch (err: any) {
+		const message = err && err.message ? err.message : String(err);
+		logLine(`ERROR: ${message}`);
+		revealLog();
+		vscode.window.showErrorMessage(`Mockaccino: inline generation failed — see the "Mockaccino" terminal/output. (${message.split('\n')[0]})`);
+	}
+}
+
+// Apply the rewritten content. When the target is the open document, use a
+// WorkspaceEdit (undoable, keeps the user's unsaved state) rather than writing to
+// disk behind the editor's back; otherwise write the file directly.
+async function applyInline(uri: vscode.Uri, oldContent: string, newContent: string, editor?: vscode.TextEditor) {
+	if (editor && editor.document.uri.toString() === uri.toString()) {
+		const doc = editor.document;
+		const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(oldContent.length));
+		const edit = new vscode.WorkspaceEdit();
+		edit.replace(uri, fullRange, newContent);
+		await vscode.workspace.applyEdit(edit);
+	} else {
+		await vscode.workspace.fs.writeFile(uri, Buffer.from(newContent, 'utf8'));
+	}
+}
+
 // Resolve the source for a "mock/stub a file" command: when a uri is supplied
 // (invoked from the explorer context menu, or by tests) it is used directly;
 // otherwise an open dialog is shown. The file is read off disk (it need not be
@@ -314,6 +390,15 @@ export function activate(context: vscode.ExtensionContext) {
 			runGenerationForFile(context, RegexMockaccino, operation, uri)
 		));
 	}
+
+	// Inline mocking: inject the C++ class mocks into the source file itself
+	// (active editor or a picked file) instead of writing a separate _mock.h.
+	context.subscriptions.push(vscode.commands.registerCommand('mockaccino.mockCurrentFileInline', () =>
+		runInlineCurrent(context)
+	));
+	context.subscriptions.push(vscode.commands.registerCommand('mockaccino.mockFileInline', (uri?: vscode.Uri) =>
+		runInlineFile(context, uri)
+	));
 
 	// "(advanced)" commands — same operations, but prompt for the parser backend
 	// (regex / clang / AI). Current editor and pick-a-file variants.

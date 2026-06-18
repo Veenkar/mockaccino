@@ -2,12 +2,20 @@ var Naming = require("./naming");
 var TemplateContext = require("./template_context");
 var TemplateRenderer = require("./template_renderer");
 var FileWriter = require("./file_writer");
+var InlineInserter = require("./inline_mock_inserter");
 
 
 interface GenerationResult {
 	result: number;
 	message: string;
 	mock_count: number;
+}
+
+/* mockInline() does not write files itself (so the edit can be applied undoably
+   in the editor), so it returns the rewritten source plus whether it changed. */
+interface InlineGenerationResult extends GenerationResult {
+	content: string;
+	changed: boolean;
 }
 
 
@@ -151,6 +159,47 @@ abstract class Mockaccino {
 			result: 0,
 			message: `${parts.join(" and ")} written to:\n${files.join("\n")}`,
 			mock_count: mock_strings_list.length + cpp_class_strings.length,
+		};
+	}
+
+	/* Inline mock: render the C++ class mocks (the C free-function path doesn't
+	   apply — it needs a separate .cc for the C-linkage symbols) and inject them
+	   into the source itself, guarded by `#ifdef <test macro>` and wrapped in
+	   markers so a re-run regenerates in place. Returns the rewritten content for
+	   the caller to apply; never touches the filesystem. */
+	public mockInline(source: string): InlineGenerationResult {
+		if ("file" !== this.uri.scheme) {
+			return { ...this.notAFileResult(), content: source, changed: false };
+		}
+
+		const cpp_class_strings = this.getCppMockClassStrings();
+		if (cpp_class_strings.length === 0) {
+			return {
+				result: 2,
+				message: "No mockable C++ interfaces found to inline (inline mocking only generates C++ class mocks).",
+				mock_count: 0,
+				content: source,
+				changed: false,
+			};
+		}
+
+		const guardMacro = this.config.get('cpp.inlineMockGuardMacro') || InlineInserter.DEFAULT_GUARD_MACRO;
+		const res = InlineInserter.insertInlineMocks(source, cpp_class_strings, { guardMacro });
+
+		if (!res.changed) {
+			const message = res.status === 'present'
+				? "Inline mocks already present in the file — nothing to insert."
+				: "Inline mocking produced no changes.";
+			return { result: 1, message, mock_count: 0, content: source, changed: false };
+		}
+
+		const verb = res.status === 'replaced' ? 'regenerated inline' : 'inserted inline';
+		return {
+			result: 0,
+			message: `${res.count} C++ class mock(s) ${verb} in ${this.naming.filename}.`,
+			mock_count: res.count,
+			content: res.content,
+			changed: true,
 		};
 	}
 

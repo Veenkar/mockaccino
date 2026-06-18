@@ -120,6 +120,58 @@ suite('Mockaccino', () => {
 		});
 	});
 
+	suite('inline mock generation', () => {
+		const IFACE = '#ifndef ISINK_H\n#define ISINK_H\nstruct ISink {\n  virtual void push(int) = 0;\n  virtual ~ISink() {}\n};\n#endif // ISINK_H\n';
+
+		test('injects a guarded C++ mock class into the source content, before the guard', () => {
+			const m = new RegexMockaccino(
+				IFACE, makeUri(path.join(tmp, 'isink.hpp')), makeConfig(), '1.2.3', '', TEMPLATES
+			);
+			const res = m.mockInline(IFACE);
+			assert.strictEqual(res.result, 0);
+			assert.strictEqual(res.changed, true);
+			assert.strictEqual(res.mock_count, 1);
+			assert.ok(res.content.includes('class ISink_Mock'), 'injects the mock class');
+			assert.ok(res.content.includes('#ifdef MOCKACCINO_INLINE_MOCKS'), 'guards with the test macro');
+			assert.ok(res.content.includes('#include <gmock/gmock.h>'), 'pulls in gmock');
+			assert.ok(res.content.indexOf('class ISink_Mock') < res.content.lastIndexOf('#endif'), 'stays inside the include guard');
+			assert.ok(res.content.includes('struct ISink'), 'keeps the original interface');
+		});
+
+		test('uses a custom guard macro from config', () => {
+			const m = new RegexMockaccino(
+				IFACE, makeUri(path.join(tmp, 'isink.hpp')),
+				makeConfig({ 'cpp.inlineMockGuardMacro': 'UNDER_TEST' }), '1.2.3', '', TEMPLATES
+			);
+			const res = m.mockInline(IFACE);
+			assert.ok(res.content.includes('#ifdef UNDER_TEST'));
+		});
+
+		test('re-running regenerates in place rather than duplicating', () => {
+			const m = new RegexMockaccino(
+				IFACE, makeUri(path.join(tmp, 'isink.hpp')), makeConfig(), '1.2.3', '', TEMPLATES
+			);
+			const once = m.mockInline(IFACE).content;
+			const m2 = new RegexMockaccino(
+				once, makeUri(path.join(tmp, 'isink.hpp')), makeConfig(), '1.2.3', '', TEMPLATES
+			);
+			const twice = m2.mockInline(once);
+			// Identical interface -> regeneration is idempotent (no duplication, no churn).
+			assert.strictEqual(twice.content.split('class ISink_Mock').length - 1, 1, 'still a single mock class');
+			assert.strictEqual(twice.content, once, 're-running an unchanged interface leaves the file as-is');
+		});
+
+		test('reports nothing to mock when the file has no C++ interfaces', () => {
+			const content = 'int foo(int a);\n';
+			const m = new RegexMockaccino(
+				content, makeUri(path.join(tmp, 'plain.h')), makeConfig(), '1.2.3', '', TEMPLATES
+			);
+			const res = m.mockInline(content);
+			assert.strictEqual(res.result, 2);
+			assert.strictEqual(res.changed, false);
+		});
+	});
+
 	suite('stub generation', () => {
 		test('writes a stub source that prints info and returns zero values', () => {
 			const content = 'int foo(int a) {\n  return a;\n}\nvoid bar(void) {\n}\n';

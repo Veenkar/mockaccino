@@ -37,6 +37,14 @@
         "title": "Mockaccino: stub a file (pick location)."
       },
       {
+        "command": "mockaccino.mockCurrentFileInline",
+        "title": "Mockaccino: mock current file inline (inject C++ class mocks into the file)."
+      },
+      {
+        "command": "mockaccino.mockFileInline",
+        "title": "Mockaccino: mock a file inline (pick location; inject C++ class mocks into the file)."
+      },
+      {
         "command": "mockaccino.mockCurrentFileAdvanced",
         "title": "Mockaccino: mock current file (advanced — pick regex/clang/AI)."
       },
@@ -146,6 +154,11 @@
           "type": "boolean",
           "default": true,
           "description": "How namespaced C++ mock classes are laid out. On (default): one flat global-namespace class whose name encodes the scope, deriving from the fully-qualified base (app::Outer::Inner -> class app_Outer_Inner_Mock : public app::Outer::Inner). Off: mirror the source namespaces — the mock is wrapped in 'namespace app::... { }' with a base relative to it (class Outer_Inner_Mock : public Outer::Inner)."
+        },
+        "mockaccino.cpp.inlineMockGuardMacro": {
+          "type": "string",
+          "default": "MOCKACCINO_INLINE_MOCKS",
+          "description": "Preprocessor macro that guards the inline mock block (the 'mock current file inline' command). The injected mock classes and their '#include <gmock/gmock.h>' are wrapped in '#ifdef <this macro>' so they only compile in the test build. Define this macro in your test target."
         },
         "mockaccino.cpp.interfaceNamePatterns": {
           "type": "array",
