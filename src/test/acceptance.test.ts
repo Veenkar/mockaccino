@@ -33,10 +33,12 @@ interface FixtureCase {
 	inputPath: string;
 	inputBasename: string;
 	name: string;          // basename without extension, e.g. "main"
+	inputExt: string;      // extension without the dot, e.g. "hpp"
 	expectedDir: string;
 	configOverrides: Record<string, any>;
 	hasMock: boolean;
 	hasStub: boolean;
+	hasInline: boolean;
 }
 
 // The single C/C++ source file at a case-folder root (everything else there —
@@ -59,6 +61,7 @@ function discoverCases(root: string): FixtureCase[] {
 			continue;
 		}
 		const name = inputName.replace(/\.[^.]+$/, '');
+		const inputExt = inputName.slice(inputName.lastIndexOf('.') + 1);
 		const expectedDir = path.join(caseDir, 'expected');
 		const configPath = path.join(caseDir, 'config.json');
 		const configOverrides = fs.existsSync(configPath)
@@ -69,12 +72,16 @@ function discoverCases(root: string): FixtureCase[] {
 			inputPath: path.join(caseDir, inputName),
 			inputBasename: inputName,
 			name,
+			inputExt,
 			expectedDir,
 			configOverrides,
 			hasMock: fs.existsSync(path.join(expectedDir, `${name}_mock.h`))
 				|| fs.existsSync(path.join(expectedDir, `${name}_mock.hpp`))
 				|| fs.existsSync(path.join(expectedDir, `${name}_mock.cc`)),
 			hasStub: fs.existsSync(path.join(expectedDir, `${name}_stub.cc`)),
+			// Inline golden = the whole rewritten source (input + injected block),
+			// named <name>_inline.<inputExt> so it stays distinct from the input.
+			hasInline: fs.existsSync(path.join(expectedDir, `${name}_inline.${inputExt}`)),
 		});
 	}
 	return cases;
@@ -161,6 +168,36 @@ suite('Acceptance (commands + golden files)', () => {
 				test('stubFile (by uri)', async () => {
 					await vscode.commands.executeCommand('mockaccino.stubFile', vscode.Uri.file(c.inputPath));
 					compareGenerated(c, ['_stub.cc']);
+				});
+			}
+
+			// Inline mocking rewrites the *source file itself*, so it runs against a
+			// throwaway copy in tmpDir (removed with the dir in teardown) — the
+			// committed fixture is never altered.
+			if (c.hasInline) {
+				const golden = path.join(c.expectedDir, `${c.name}_inline.${c.inputExt}`);
+				const compareInline = (actualPath: string) => {
+					assert.ok(fs.existsSync(actualPath), `inline command did not write ${actualPath}`);
+					const actual = normalize(fs.readFileSync(actualPath, 'utf8'));
+					const expected = normalize(fs.readFileSync(golden, 'utf8'));
+					assert.strictEqual(actual, expected, `${c.name}_inline.${c.inputExt} does not match the golden file`);
+				};
+
+				test('mock inline (current file — edits the open buffer)', async () => {
+					const copy = path.join(tmpDir, c.inputBasename);
+					fs.copyFileSync(c.inputPath, copy);
+					const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(copy));
+					await vscode.window.showTextDocument(doc);
+					await vscode.commands.executeCommand('mockaccino.mockCurrentFileInline');
+					await doc.save();
+					compareInline(copy);
+				});
+
+				test('mockFile inline (by uri — writes to disk)', async () => {
+					const copy = path.join(tmpDir, c.inputBasename);
+					fs.copyFileSync(c.inputPath, copy);
+					await vscode.commands.executeCommand('mockaccino.mockFileInline', vscode.Uri.file(copy));
+					compareInline(copy);
 				});
 			}
 		});

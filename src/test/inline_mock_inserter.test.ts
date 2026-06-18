@@ -111,6 +111,26 @@ suite('inline_mock_inserter.insertInlineMocks', () => {
 		assert.strictEqual(res.content, src);
 	});
 
+	test('inserts before trailing comments in a #pragma once header (no #endif)', () => {
+		const src = '#pragma once\nstruct IFoo { virtual int f(int) = 0; };\n// end of file\n';
+		const res = insertInlineMocks(src, [MOCK]);
+		assert.strictEqual(res.status, 'inserted');
+		assert.ok(res.content.indexOf('class app_IFoo_Mock') < res.content.indexOf('// end of file'), 'mock precedes the footer comment');
+		assert.ok(res.content.trimEnd().endsWith('// end of file'), 'footer comment stays last');
+	});
+
+	test('honors a custom guard macro and markers', () => {
+		const res = insertInlineMocks('int a;\n', [MOCK], {
+			guardMacro: 'UNDER_TEST',
+			beginMarker: '/*BX*/',
+			endMarker: '/*EX*/',
+		});
+		assert.ok(res.content.includes('/*BX*/'));
+		assert.ok(res.content.includes('/*EX*/'));
+		assert.ok(res.content.includes('#ifdef UNDER_TEST'));
+		assert.ok(res.content.includes('#endif  // UNDER_TEST'));
+	});
+
 	test('preserves CRLF line endings', () => {
 		const src = '#ifndef F\r\n#define F\r\nint a;\r\n#endif\r\n';
 		const res = insertInlineMocks(src, [MOCK]);

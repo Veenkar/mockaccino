@@ -147,6 +147,37 @@ console.log('[integration] 2/5 Generating mocks with Mockaccino (regex + clang).
 	generateCppWith(RegexMockaccino, genDir, 'regex');
 	generateCppWith(ClangMockaccino, genClangDir, 'clang');
 
+	// Inline C++ class mock: mockInline() rewrites sink.hpp in memory (injecting
+	// the mock behind #ifdef MOCKACCINO_INLINE_MOCKS) without touching the
+	// original — we write its result to <outDir>/sink_inline.hpp. Proves the
+	// inline output compiles and the two backends stay interchangeable.
+	const generateInlineCppWith = (BackendClass, outDir, label) => {
+		fs.mkdirSync(outDir, { recursive: true });
+		const log = console.log;
+		const warn = console.warn;
+		console.log = () => {};
+		console.warn = () => {};
+		let result;
+		try {
+			const src = path.join(srcDir, 'sink.hpp');
+			const content = fs.readFileSync(src, 'utf8');
+			const uri = { fsPath: src, scheme: 'file' };
+			const generator = new BackendClass(content, uri, makeConfig(outDir), '0.0.0-test', '', templatesDir);
+			result = generator.mockInline(content);
+		} finally {
+			console.log = log;
+			console.warn = warn;
+		}
+		if (result.result !== 0 || !result.changed) {
+			fail(`${label} inline C++ mock generation for sink.hpp returned ${result.result}: ${result.message}`);
+		}
+		fs.writeFileSync(path.join(outDir, 'sink_inline.hpp'), result.content);
+		log(`  [${label}] sink.hpp -> sink_inline.hpp (${result.message})`);
+	};
+
+	generateInlineCppWith(RegexMockaccino, genDir, 'regex');
+	generateInlineCppWith(ClangMockaccino, genClangDir, 'clang');
+
 	// Negative path: a header with a deliberate type error must surface clang's
 	// diagnostics. clang still emits a partial AST (so generation succeeds for the
 	// valid decls), but the backend must report clangHadErrors and the error text
