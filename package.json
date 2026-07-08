@@ -63,6 +63,10 @@
       {
         "command": "mockaccino.addMcpServerToClaudeCode",
         "title": "Mockaccino: add MCP server to Claude Code (.mcp.json)."
+      },
+      {
+        "command": "mockaccino.showLog",
+        "title": "Mockaccino: show log."
       }
     ],
     "mcpServerDefinitionProviders": [

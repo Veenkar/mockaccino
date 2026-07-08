@@ -44,13 +44,16 @@ function ensureTerminal(): void {
 	terminal = vscode.window.createTerminal({ name: 'Mockaccino', pty });
 }
 
-// Append a line to both sinks. Terminals need CRLF.
+// Append a line to both sinks. Terminals need CRLF. Buffers into the terminal
+// history without creating the terminal tab — only revealLog() (error paths)
+// creates it, so routine logging (e.g. MCP server startup) doesn't pop a tab.
 function logLine(line: string): void {
 	output.appendLine(line);
-	ensureTerminal();
 	const data = line.replace(/\r?\n/g, '\r\n') + '\r\n';
 	terminalBuffer += data;
-	terminalWriter!.fire(data);
+	if (terminalWriter) {
+		terminalWriter.fire(data);
+	}
 }
 
 // Bring the log into view (terminal tab + output channel), preserving editor focus.
@@ -436,6 +439,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// does not discover VS Code-contributed servers) can connect to the same server.
 	context.subscriptions.push(vscode.commands.registerCommand('mockaccino.addMcpServerToClaudeCode', () =>
 		addMcpServerToClaudeCode()
+	));
+
+	context.subscriptions.push(vscode.commands.registerCommand('mockaccino.showLog', () =>
+		revealLog()
 	));
 }
 
